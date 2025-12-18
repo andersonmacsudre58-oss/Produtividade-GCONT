@@ -1,0 +1,5 @@
+{
+  "name": "Produtividade ",
+  "description": "Uma plataforma completa para gestão de produtividade, permitindo o cadastro de colaboradores, registro de serviços (médicos, manutenção, licitações, etc.) e visualização de métricas através de gráficos e insights de IA.",
+  "requestFramePermissions": []
+}
