@@ -5,23 +5,26 @@ import { Task, Person, ServiceCategory } from "../types";
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 export async function getProductivityInsights(tasks: Task[], people: Person[], categories: ServiceCategory[]) {
-  if (tasks.length === 0) return "Ainda não há dados suficientes para uma análise.";
+  if (tasks.length === 0) return "Ainda não há dados para análise no período selecionado.";
 
   const prompt = `
-    Analise os seguintes dados de produção quantitativa de uma equipe:
+    Analise os dados de produtividade de uma equipe focada em volumes de Processos e Notas Fiscais:
     
-    Categorias de Serviço Monitoradas: ${categories.map(c => c.name).join(', ')}
-    Equipe: ${people.map(p => p.name).join(', ')}
+    Categorias: ${categories.map(c => c.name).join(', ')}
     
-    Registros de Produção:
+    Dados de Produção:
     ${tasks.map(t => {
       const p = people.find(person => person.id === t.personId);
       const c = categories.find(cat => cat.id === t.serviceCategoryId);
-      return `- ${t.date}: ${p?.name} realizou ${c?.name} (Notas/Ref: ${t.invoiceNumber}) - Quantidade: ${t.quantity}.`;
+      return `- Data: ${t.date} | Colaborador: ${p?.name} | Serviço: ${c?.name} | Processos: ${t.processQuantity} | Notas Fiscais: ${t.invoiceQuantity}.`;
     }).join('\n')}
     
-    Por favor, forneça um resumo executivo focado nos volumes e na eficiência por categoria. Identifique gargalos e sugira melhorias estratégicas.
-    Responda em Português do Brasil de forma profissional, direta e motivadora.
+    Forneça uma análise comparativa:
+    1. Quem está com maior volume de notas fiscais vs processos.
+    2. Identifique tendências de sobrecarga ou eficiência.
+    3. Sugira estratégias para equilibrar a produção.
+    
+    Responda em Português do Brasil de forma executiva e profissional.
   `;
 
   try {
@@ -31,7 +34,7 @@ export async function getProductivityInsights(tasks: Task[], people: Person[], c
     });
     return response.text;
   } catch (error) {
-    console.error("Erro ao obter insights da IA:", error);
-    return "Desculpe, não foi possível gerar insights no momento.";
+    console.error("Erro IA:", error);
+    return "Falha ao gerar insights da IA.";
   }
 }

@@ -17,9 +17,9 @@ export interface Task {
   id: string;
   personId: string;
   serviceCategoryId: string; 
-  invoiceNumber: string; // Alterado de description para invoiceNumber
+  invoiceQuantity: number; // Qtd de Notas Fiscais
   date: string; // ISO date string YYYY-MM-DD
-  quantity: number;
+  processQuantity: number; // Qtd de Processos (antigo quantity)
 }
 
 export interface AppState {
