@@ -54,14 +54,14 @@ app.post('/api/state', (req, res) => {
   }
 });
 
-// Serve arquivos estáticos diretamente da raiz (onde o Render coloca os arquivos)
-app.use(express.static(__dirname));
+// CRUCIAL: Serve os arquivos estáticos da pasta 'dist' (gerada pelo npm run build)
+app.use(express.static(path.join(__dirname, 'dist')));
 
 // Fallback para SPA (Single Page Application)
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
+  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
 app.listen(PORT, () => {
-  console.log(`Servidor rodando em: http://localhost:${PORT}`);
+  console.log(`Servidor rodando na porta ${PORT}`);
 });
