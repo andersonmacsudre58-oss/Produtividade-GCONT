@@ -54,10 +54,10 @@ app.post('/api/state', (req, res) => {
   }
 });
 
-// CRUCIAL: Serve os arquivos estáticos da pasta 'dist' (gerada pelo npm run build)
+// Serve os arquivos estáticos da pasta 'dist' (importante para o Render)
 app.use(express.static(path.join(__dirname, 'dist')));
 
-// Fallback para SPA (Single Page Application)
+// Fallback para SPA - qualquer rota que não seja API carrega o index.html da dist
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
