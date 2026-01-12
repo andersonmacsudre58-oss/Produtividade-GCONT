@@ -4,22 +4,17 @@ import { AppState } from "../types";
 export const apiService = {
   async loadState(): Promise<AppState | null> {
     try {
-      // Usamos um timeout curto para não travar a UI se o servidor estiver offline
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000);
-
-      const response = await fetch('/api/state', { signal: controller.signal });
-      clearTimeout(timeoutId);
-
+      const response = await fetch('/api/state');
+      
       if (!response.ok) {
-        console.warn('API respondeu com erro, usando dados locais.');
+        console.warn('Servidor respondeu com erro, tentando novamente em instantes...');
         return null;
       }
       
-      return await response.json();
+      const data = await response.json();
+      return data;
     } catch (error) {
-      // Em desenvolvimento local ou falha de rede, falha silenciosamente
-      console.error("Servidor indisponível ou erro de rede:", error);
+      console.error("Erro ao conectar com a API do Render:", error);
       return null;
     }
   },
@@ -28,12 +23,15 @@ export const apiService = {
     try {
       const response = await fetch('/api/state', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
         body: JSON.stringify(state)
       });
       return response.ok;
     } catch (error) {
-      console.error("Erro ao sincronizar com o servidor:", error);
+      console.error("Erro ao salvar dados no servidor:", error);
       return false;
     }
   }
