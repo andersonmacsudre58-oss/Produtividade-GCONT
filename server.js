@@ -37,7 +37,8 @@ if (!fs.existsSync(DB_PATH)) {
 app.get('/api/state', (req, res) => {
   try {
     const data = fs.readFileSync(DB_PATH, 'utf8');
-    res.json(JSON.parse(data));
+    res.setHeader('Content-Type', 'application/json');
+    res.send(data);
   } catch (error) {
     res.status(500).json({ error: 'Erro ao ler dados' });
   }
@@ -53,21 +54,14 @@ app.post('/api/state', (req, res) => {
   }
 });
 
-// Serve arquivos estáticos da pasta root e dist (essencial para o Render)
+// Serve arquivos estáticos diretamente da raiz (onde o Render coloca os arquivos)
 app.use(express.static(__dirname));
-app.use(express.static(path.join(__dirname, 'dist')));
 
-// Fallback para SPA
+// Fallback para SPA (Single Page Application)
 app.get('*', (req, res) => {
-  // Se estiver em desenvolvimento/build local, tenta o index.html da raiz
-  const rootIndex = path.join(__dirname, 'index.html');
-  if (fs.existsSync(rootIndex)) {
-    return res.sendFile(rootIndex);
-  }
-  // No Render, geralmente vai para dist/index.html
-  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+  res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 app.listen(PORT, () => {
-  console.log(`Servidor rodando na porta ${PORT}`);
+  console.log(`Servidor rodando em: http://localhost:${PORT}`);
 });

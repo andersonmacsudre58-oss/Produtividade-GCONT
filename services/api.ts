@@ -5,16 +5,9 @@ export const apiService = {
   async loadState(): Promise<AppState | null> {
     try {
       const response = await fetch('/api/state');
-      
-      if (!response.ok) {
-        console.warn('Servidor respondeu com erro, tentando novamente em instantes...');
-        return null;
-      }
-      
-      const data = await response.json();
-      return data;
+      if (!response.ok) return null;
+      return await response.json();
     } catch (error) {
-      console.error("Erro ao conectar com a API do Render:", error);
       return null;
     }
   },
@@ -23,15 +16,11 @@ export const apiService = {
     try {
       const response = await fetch('/api/state', {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(state)
       });
       return response.ok;
     } catch (error) {
-      console.error("Erro ao salvar dados no servidor:", error);
       return false;
     }
   }
