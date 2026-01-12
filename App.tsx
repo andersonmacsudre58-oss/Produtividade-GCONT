@@ -8,30 +8,40 @@ import DailyLog from './components/DailyLog';
 import ServiceManager from './components/ServiceManager';
 import Login from './components/Login';
 import { DEFAULT_CATEGORIES } from './constants';
+import { apiService } from './services/api';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'people' | 'logs' | 'services'>('dashboard');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   
-  const [state, setState] = useState<AppState>(() => {
-    const saved = localStorage.getItem('prod360_data');
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      if (!parsed.serviceCategories) parsed.serviceCategories = DEFAULT_CATEGORIES;
-      if (!parsed.userRole) parsed.userRole = 'master';
-      return parsed;
-    }
-    return { 
-      people: [], 
-      tasks: [], 
-      serviceCategories: DEFAULT_CATEGORIES,
-      userRole: 'master' 
-    };
+  const [state, setState] = useState<AppState>({ 
+    people: [], 
+    tasks: [], 
+    serviceCategories: DEFAULT_CATEGORIES,
+    userRole: 'master' 
   });
 
+  // Carregamento inicial do servidor Render
   useEffect(() => {
-    localStorage.setItem('prod360_data', JSON.stringify(state));
-  }, [state]);
+    async function init() {
+      try {
+        const savedState = await apiService.loadState();
+        if (savedState) setState(savedState);
+      } catch (error) {
+        console.error("Erro no carregamento:", error);
+      } finally {
+        setTimeout(() => setIsLoading(false), 800);
+      }
+    }
+    init();
+  }, []);
+
+  // Persistência centralizada no servidor
+  const persistState = async (newState: AppState) => {
+    setState(newState);
+    await apiService.saveState(newState);
+  };
 
   const handleLogin = (role: UserRole) => {
     setState(prev => ({ ...prev, userRole: role }));
@@ -44,7 +54,7 @@ const App: React.FC = () => {
   };
 
   const setUserRole = (role: UserRole) => {
-    setState(prev => ({ ...prev, userRole: role }));
+    persistState({ ...state, userRole: role });
     if (role === 'basic' && (activeTab === 'people' || activeTab === 'services')) {
       setActiveTab('dashboard');
     }
@@ -52,50 +62,64 @@ const App: React.FC = () => {
 
   const addPerson = (person: Person) => {
     if (state.userRole !== 'master') return;
-    setState(prev => ({ ...prev, people: [...prev.people, person] }));
+    persistState({ ...state, people: [...state.people, person] });
   };
 
   const removePerson = (id: string) => {
     if (state.userRole !== 'master') return;
-    setState(prev => ({
-      ...prev,
-      people: prev.people.filter(p => p.id !== id),
-      tasks: prev.tasks.filter(t => t.personId !== id)
-    }));
+    persistState({
+      ...state,
+      people: state.people.filter(p => p.id !== id),
+      tasks: state.tasks.filter(t => t.personId !== id)
+    });
   };
 
   const addTask = (task: Task) => {
-    setState(prev => ({ ...prev, tasks: [...prev.tasks, task] }));
+    persistState({ ...state, tasks: [...state.tasks, task] });
   };
 
   const editTask = (updatedTask: Task) => {
-    setState(prev => ({
-      ...prev,
-      tasks: prev.tasks.map(t => t.id === updatedTask.id ? updatedTask : t)
-    }));
+    persistState({
+      ...state,
+      tasks: state.tasks.map(t => t.id === updatedTask.id ? updatedTask : t)
+    });
   };
 
   const removeTask = (id: string) => {
     if (state.userRole !== 'master') return;
-    setState(prev => ({
-      ...prev,
-      tasks: prev.tasks.filter(t => t.id !== id)
-    }));
+    persistState({
+      ...state,
+      tasks: state.tasks.filter(t => t.id !== id)
+    });
   };
 
   const addServiceCategory = (cat: ServiceCategory) => {
     if (state.userRole !== 'master') return;
-    setState(prev => ({ ...prev, serviceCategories: [...prev.serviceCategories, cat] }));
+    persistState({ ...state, serviceCategories: [...state.serviceCategories, cat] });
   };
 
   const removeServiceCategory = (id: string) => {
     if (state.userRole !== 'master') return;
-    setState(prev => ({
-      ...prev,
-      serviceCategories: prev.serviceCategories.filter(c => c.id !== id),
-      tasks: prev.tasks.filter(t => t.serviceCategoryId !== id)
-    }));
+    persistState({
+      ...state,
+      serviceCategories: state.serviceCategories.filter(c => c.id !== id),
+      tasks: state.tasks.filter(t => t.serviceCategoryId !== id)
+    });
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center">
+        <div className="relative">
+          <div className="w-20 h-20 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin"></div>
+          <div className="absolute inset-0 flex items-center justify-center">
+             <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+          </div>
+        </div>
+        <p className="mt-6 font-bold text-slate-400 uppercase tracking-widest text-xs animate-pulse">Carregando dados do servidor...</p>
+      </div>
+    );
+  }
 
   if (!isLoggedIn) {
     return <Login onLogin={handleLogin} />;
@@ -114,17 +138,17 @@ const App: React.FC = () => {
       <main className="flex-1 p-6 md:p-10 overflow-auto">
         <header className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-slate-800">
+            <h1 className="text-3xl font-bold text-slate-800 mb-1">
               {activeTab === 'dashboard' && 'Visão Geral'}
               {activeTab === 'people' && 'Gerenciar Equipe'}
               {activeTab === 'logs' && 'Registro Diário'}
               {activeTab === 'services' && 'Tipos de Serviço'}
             </h1>
-            <p className="text-slate-500 mt-2 font-medium">
+            <p className="text-slate-500 font-medium">
               {activeTab === 'dashboard' && 'Monitore a produtividade e o desempenho da equipe.'}
               {activeTab === 'people' && 'Adicione ou remova membros da sua equipe.'}
               {activeTab === 'logs' && 'Visualize e gerencie os serviços realizados diariamente.'}
-              {activeTab === 'services' && 'Personalize as categorias de serviço monitoradas.'}
+              {activeTab === 'services' && 'Personalize as categorias e gerencie a base de dados.'}
             </p>
           </div>
           
@@ -134,24 +158,13 @@ const App: React.FC = () => {
             }`}>
               {state.userRole === 'master' ? 'Acesso Master' : 'Acesso Básico'}
             </div>
-            <button 
-              onClick={handleLogout}
-              className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
-              title="Sair do sistema"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
-            </button>
           </div>
         </header>
 
-        {activeTab === 'dashboard' && (
-          <Dashboard state={state} />
-        )}
-
+        {activeTab === 'dashboard' && <Dashboard state={state} />}
         {activeTab === 'people' && state.userRole === 'master' && (
           <PeopleManager people={state.people} onAdd={addPerson} onRemove={removePerson} />
         )}
-
         {activeTab === 'logs' && (
           <DailyLog 
             tasks={state.tasks} 
@@ -163,25 +176,23 @@ const App: React.FC = () => {
             userRole={state.userRole}
           />
         )}
-
         {activeTab === 'services' && state.userRole === 'master' && (
           <ServiceManager 
             categories={state.serviceCategories} 
             onAdd={addServiceCategory} 
             onRemove={removeServiceCategory} 
+            state={state}
+            onImport={(imported) => persistState(imported)}
           />
         )}
 
         {(activeTab === 'people' || activeTab === 'services') && state.userRole === 'basic' && (
           <div className="bg-white p-12 rounded-3xl shadow-sm border border-slate-200 text-center">
-            <div className="bg-slate-50 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6 text-slate-300">
-              <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
-            </div>
             <h2 className="text-2xl font-bold text-slate-800 mb-2">Acesso Restrito</h2>
-            <p className="text-slate-500 max-w-sm mx-auto">Você está utilizando um perfil operacional (Básico) e não possui permissões para configurações de equipe ou serviços.</p>
+            <p className="text-slate-500">Perfil operacional sem permissões administrativas.</p>
             <button 
               onClick={() => setActiveTab('dashboard')}
-              className="mt-8 bg-slate-900 text-white px-8 py-3 rounded-2xl font-bold hover:bg-black transition-all shadow-xl shadow-slate-200"
+              className="mt-8 bg-slate-900 text-white px-8 py-3 rounded-2xl font-bold hover:bg-black transition-all"
             >
               Retornar ao Painel
             </button>
