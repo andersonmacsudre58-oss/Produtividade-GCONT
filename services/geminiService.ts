@@ -17,11 +17,11 @@ export async function getProductivityInsights(tasks: Task[], people: Person[], c
     ${tasks.map(t => {
       const p = people.find(person => person.id === t.personId);
       const c = categories.find(cat => cat.id === t.serviceCategoryId);
-      return `- ${t.date}: ${p?.name} realizou ${c?.name} (${t.description}) - Quantidade: ${t.quantity}.`;
+      return `- ${t.date}: ${p?.name} realizou ${c?.name} (Notas/Ref: ${t.invoiceNumber}) - Quantidade: ${t.quantity}.`;
     }).join('\n')}
     
-    Por favor, forneça um resumo executivo baseado nos volumes produzidos, identifique quais categorias estão com maior volume e sugira melhorias. 
-    Responda em Português do Brasil de forma profissional e motivadora.
+    Por favor, forneça um resumo executivo focado nos volumes e na eficiência por categoria. Identifique gargalos e sugira melhorias estratégicas.
+    Responda em Português do Brasil de forma profissional, direta e motivadora.
   `;
 
   try {

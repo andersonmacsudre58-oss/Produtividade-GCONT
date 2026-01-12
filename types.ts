@@ -16,8 +16,8 @@ export interface Person {
 export interface Task {
   id: string;
   personId: string;
-  serviceCategoryId: string; // References ServiceCategory.id
-  description: string;
+  serviceCategoryId: string; 
+  invoiceNumber: string; // Alterado de description para invoiceNumber
   date: string; // ISO date string YYYY-MM-DD
   quantity: number;
 }
