@@ -14,13 +14,21 @@ interface DailyLogProps {
 }
 
 const DailyLog: React.FC<DailyLogProps> = ({ tasks, people, categories, onAddTask, onEditTask, onRemoveTask, userRole }) => {
+  // Função auxiliar para data local YYYY-MM-DD
+  const getLocalDateStr = () => {
+    const d = new Date();
+    const offset = d.getTimezoneOffset();
+    const localDate = new Date(d.getTime() - (offset * 60 * 1000));
+    return localDate.toISOString().split('T')[0];
+  };
+
   const [selectedPerson, setSelectedPerson] = useState('');
   const [selectedCategoryId, setSelectedCategoryId] = useState('');
   const [invoiceQuantity, setInvoiceQuantity] = useState<number>(0);
   const [processQuantity, setProcessQuantity] = useState<number>(1);
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [date, setDate] = useState(getLocalDateStr());
   
-  const [filterDate, setFilterDate] = useState(new Date().toISOString().split('T')[0]);
+  const [filterDate, setFilterDate] = useState(getLocalDateStr());
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
 
   const filteredTasks = useMemo(() => {
@@ -37,9 +45,9 @@ const DailyLog: React.FC<DailyLogProps> = ({ tasks, people, categories, onAddTas
       id: editingTaskId || Math.random().toString(36).substr(2, 9),
       personId: selectedPerson,
       serviceCategoryId: selectedCategoryId,
-      invoiceQuantity: invoiceQuantity,
+      invoiceQuantity: Number(invoiceQuantity),
       date,
-      processQuantity: processQuantity
+      processQuantity: Number(processQuantity)
     };
 
     if (editingTaskId) {
@@ -101,11 +109,11 @@ const DailyLog: React.FC<DailyLogProps> = ({ tasks, people, categories, onAddTas
           </div>
           <div className="lg:col-span-1">
             <label className="block text-[10px] font-black uppercase text-slate-400 mb-1.5 tracking-wider">Qtd. Processos</label>
-            <input type="number" min="1" value={processQuantity} onChange={(e) => setProcessQuantity(parseInt(e.target.value))} className="w-full px-4 py-3 rounded-2xl border border-slate-200 outline-none focus:ring-2 focus:ring-blue-500 transition-all font-bold" />
+            <input type="number" min="1" value={processQuantity} onChange={(e) => setProcessQuantity(parseInt(e.target.value) || 0)} className="w-full px-4 py-3 rounded-2xl border border-slate-200 outline-none focus:ring-2 focus:ring-blue-500 transition-all font-bold" />
           </div>
           <div className="lg:col-span-1">
             <label className="block text-[10px] font-black uppercase text-slate-400 mb-1.5 tracking-wider">Qtd. Notas Fiscais</label>
-            <input type="number" min="0" value={invoiceQuantity} onChange={(e) => setInvoiceQuantity(parseInt(e.target.value))} className="w-full px-4 py-3 rounded-2xl border border-emerald-200 outline-none focus:ring-2 focus:ring-emerald-500 transition-all font-bold text-emerald-600" />
+            <input type="number" min="0" value={invoiceQuantity} onChange={(e) => setInvoiceQuantity(parseInt(e.target.value) || 0)} className="w-full px-4 py-3 rounded-2xl border border-emerald-200 outline-none focus:ring-2 focus:ring-emerald-500 transition-all font-bold text-emerald-600" />
           </div>
           <div className="flex gap-2">
             <button type="submit" className={`flex-1 ${editingTaskId ? 'bg-amber-500' : 'bg-blue-600'} text-white py-3.5 rounded-2xl font-bold shadow-lg transition-all active:scale-95`}>

@@ -22,17 +22,20 @@ const App: React.FC = () => {
     userRole: 'master' 
   });
 
-  // Carregamento inicial do servidor Render
+  const loadData = async () => {
+    try {
+      const savedState = await apiService.loadState();
+      if (savedState) setState(savedState);
+    } catch (error) {
+      console.error("Erro no carregamento:", error);
+    }
+  };
+
+  // Carregamento inicial do servidor
   useEffect(() => {
     async function init() {
-      try {
-        const savedState = await apiService.loadState();
-        if (savedState) setState(savedState);
-      } catch (error) {
-        console.error("Erro no carregamento:", error);
-      } finally {
-        setTimeout(() => setIsLoading(false), 800);
-      }
+      await loadData();
+      setTimeout(() => setIsLoading(false), 800);
     }
     init();
   }, []);
@@ -161,7 +164,7 @@ const App: React.FC = () => {
           </div>
         </header>
 
-        {activeTab === 'dashboard' && <Dashboard state={state} />}
+        {activeTab === 'dashboard' && <Dashboard state={state} onRefresh={loadData} />}
         {activeTab === 'people' && state.userRole === 'master' && (
           <PeopleManager people={state.people} onAdd={addPerson} onRemove={removePerson} />
         )}
