@@ -1,43 +1,39 @@
 
 import { AppState } from "../types";
 import { dbService } from "./db";
-import { cloudDb } from "./cloudDb";
-
-// Este ID é o nome do seu 'banco' dentro do Firebase. 
-// Você pode mudar para o nome da sua empresa/projeto.
-const GROUP_ID = "main_production_v1";
+import { supabaseService } from "./supabase";
 
 export const apiService = {
   async loadState(): Promise<AppState | null> {
     try {
-      // 1. Tenta buscar na Nuvem (Firebase)
-      const cloudData = await cloudDb.fetchState(GROUP_ID);
+      // 1. Tenta buscar no Supabase (Banco Real)
+      const cloudData = await supabaseService.getState();
       
       if (cloudData) {
-        // Se encontrou, atualiza o cache local do navegador
+        // Cache local para performance
         await dbService.save(cloudData);
         return cloudData;
       }
 
-      // 2. Fallback: Se estiver sem internet, usa o que está salvo no navegador
+      // 2. Fallback: Offline ou primeira vez
       return await dbService.load();
     } catch (error) {
-      console.error("Erro no carregamento híbrido:", error);
+      console.error("Erro no carregamento Supabase:", error);
       return await dbService.load();
     }
   },
 
   async saveState(state: AppState): Promise<boolean> {
     try {
-      // 1. Salva no navegador (resultado instantâneo na tela)
+      // 1. Salva localmente (instantâneo)
       await dbService.save(state);
 
-      // 2. Sincroniza com o Firebase (persistência permanente)
-      await cloudDb.syncState(GROUP_ID, state);
+      // 2. Sincroniza com Supabase (Persistência)
+      await supabaseService.saveState(state);
       
       return true;
     } catch (error) {
-      console.error("Erro ao persistir dados na nuvem:", error);
+      console.error("Erro ao salvar dados:", error);
       return false;
     }
   }

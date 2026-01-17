@@ -58,10 +58,10 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onRefresh }) => {
         return;
     }
 
-    if (activePreset !== 'custom') {
-      setStartDate(getLocalDateStr(start));
-      setEndDate(getLocalDateStr(now));
-    }
+    // Fix: Removed redundant check for 'custom' because 'case "custom": return' above handles it.
+    // This resolves the error where TypeScript sees no overlap between the narrowed type and 'custom'.
+    setStartDate(getLocalDateStr(start));
+    setEndDate(getLocalDateStr(now));
   }, [activePreset]);
 
   const isSpecialCategory = (categoryId: string) => {
