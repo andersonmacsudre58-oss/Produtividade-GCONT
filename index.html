@@ -6,17 +6,45 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Produtividade 360</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        // ESSENCIAL: Configura o Tailwind para usar o modo escuro baseado em classe
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    animation: {
+                        'spin-slow': 'spin 3s linear infinite',
+                        'shake': 'shake 0.5s cubic-bezier(.36,.07,.19,.97) both',
+                    },
+                    keyframes: {
+                        shake: {
+                            '10%, 90%': { transform: 'translate3d(-1px, 0, 0)' },
+                            '20%, 80%': { transform: 'translate3d(2px, 0, 0)' },
+                            '30%, 50%, 70%': { transform: 'translate3d(-4px, 0, 0)' },
+                            '40%, 60%': { transform: 'translate3d(4px, 0, 0)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        * {
-            transition: background-color 0.3s ease, border-color 0.3s ease, color 0.15s ease;
+        /* Transição suave para todas as cores e fundos */
+        html, body, div, aside, main, header, nav, button, input, select, table, tr, td, th {
+            transition: background-color 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
+                        border-color 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
+                        color 0.2s ease-in-out,
+                        box-shadow 0.4s ease;
         }
+
         body {
             font-family: 'Inter', sans-serif;
             background-color: #f8fafc;
             margin: 0;
             overflow-x: hidden;
         }
+
         .custom-scrollbar::-webkit-scrollbar {
             width: 6px;
         }
@@ -43,6 +71,14 @@
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
+
+        /* Melhoria visual no foco e estados ativos */
+        .active-tab-shadow {
+            box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.2);
+        }
+        .dark .active-tab-shadow {
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+        }
     </style>
 <script type="importmap">
 {
@@ -68,7 +104,7 @@
 }
 </script>
 </head>
-<body class="dark:bg-slate-950">
+<body class="bg-slate-50 dark:bg-slate-950 transition-colors duration-500">
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
 </body>
