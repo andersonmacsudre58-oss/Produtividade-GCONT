@@ -95,15 +95,9 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onRefresh }) => {
   const commonTasks = filteredTasks.filter(t => !isSpecialCategory(t.serviceCategoryId));
   const specialTasks = filteredTasks.filter(t => isSpecialCategory(t.serviceCategoryId));
 
-  // O Ranking de Analistas mostra todos que produziram no período, independente do filtro individual,
-  // mas aqui vamos permitir que ele reaja ao filtro para destacar quem foi selecionado.
   const barData = useMemo(() => {
-    // Para o gráfico de barras, usamos as tarefas filtradas apenas pela data (não por pessoa)
-    // para que o ranking continue visível, mas clicável.
     const dateFilteredOnly = (state.tasks || []).filter(t => (!startDate || t.date >= startDate) && (!endDate || t.date <= endDate));
-    const tasksToCalculate = activeTab === 'common' 
-      ? dateFilteredOnly.filter(t => !isSpecialCategory(t.serviceCategoryId))
-      : dateFilteredOnly.filter(t => isSpecialCategory(t.serviceCategoryId));
+    const tasksToCalculate = dateFilteredOnly.filter(t => !isSpecialCategory(t.serviceCategoryId));
 
     return (state.people || []).map(person => {
       const pTasks = tasksToCalculate.filter(t => t.personId === person.id);
@@ -115,11 +109,10 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onRefresh }) => {
         name: person.name,
         processos,
         notas,
-        // Opacidade para destacar selecionados
         opacity: selectedPeopleIds.length === 0 || selectedPeopleIds.includes(person.id) ? 1 : 0.3
       };
     }).filter(d => d.processos > 0 || d.notas > 0).sort((a, b) => b.processos - a.processos);
-  }, [state.people, state.tasks, startDate, endDate, activeTab, selectedPeopleIds]);
+  }, [state.people, state.tasks, startDate, endDate, selectedPeopleIds]);
 
   const areaData = useMemo(() => {
     const map: Record<string, any> = {};
@@ -158,6 +151,26 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onRefresh }) => {
       }))
       .filter(d => d.value > 0);
   }, [specialTasks, state.serviceCategories]);
+
+  const renderCustomLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, value, name }: any) => {
+    const RADIAN = Math.PI / 180;
+    const radius = 25 + outerRadius;
+    const x = cx + radius * Math.cos(-midAngle * RADIAN);
+    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+
+    return (
+      <text
+        x={x}
+        y={y}
+        fill="#64748b"
+        textAnchor={x > cx ? 'start' : 'end'}
+        dominantBaseline="central"
+        className="text-[11px] font-black uppercase tracking-tight"
+      >
+        {`${name}: ${value}`}
+      </text>
+    );
+  };
 
   const handleGetInsights = async () => {
     if (filteredTasks.length === 0) return;
@@ -273,67 +286,75 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onRefresh }) => {
 
       {/* GRÁFICOS */}
       <div className="space-y-8 md:space-y-12">
-        <div className="bg-white dark:bg-slate-900 p-6 md:p-10 rounded-[32px] md:rounded-[48px] shadow-sm border border-slate-200 dark:border-slate-800 transition-colors">
-          <h3 className="text-xl md:text-2xl font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight mb-8 md:mb-10">Ranking de Analistas <span className="text-[10px] font-normal text-slate-400 normal-case ml-2">(Clique nas barras para filtrar)</span></h3>
-          <div className="chart-container-lg">
-            {barData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={barData} margin={{ top: 30, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" className="dark:opacity-10" />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} fontSize={10} fontWeight={800} interval={0} tick={{ fill: '#94a3b8' }} />
-                  <YAxis axisLine={false} tickLine={false} fontSize={10} tick={{ fill: '#94a3b8' }} />
-                  <Tooltip cursor={{fill: 'rgba(248, 250, 252, 0.05)'}} contentStyle={{ borderRadius: '12px', border: 'none', backgroundColor: '#1e293b', color: '#fff' }} itemStyle={{ color: '#fff' }} />
-                  <Legend verticalAlign="top" align="right" wrapperStyle={{ paddingTop: '0px', paddingBottom: '30px', fontSize: '10px' }} formatter={(value) => <span className="text-slate-500 dark:text-slate-400 font-bold uppercase">{value}</span>} />
-                  <Bar 
-                    dataKey="processos" 
-                    name="Processos" 
-                    fill="#3b82f6" 
-                    radius={[6, 6, 0, 0]} 
-                    barSize={24}
-                    onClick={(data) => togglePerson(data.id)}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    {barData.map((entry, index) => <Cell key={`c1-${index}`} fillOpacity={entry.opacity} />)}
-                    <LabelList dataKey="processos" position="top" offset={10} fontSize={11} fontWeight={800} fill="#64748b" />
-                  </Bar>
-                  <Bar 
-                    dataKey="notas" 
-                    name="Notas Fiscais" 
-                    fill="#10b981" 
-                    radius={[6, 6, 0, 0]} 
-                    barSize={24}
-                    onClick={(data) => togglePerson(data.id)}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    {barData.map((entry, index) => <Cell key={`c2-${index}`} fillOpacity={entry.opacity} />)}
-                    <LabelList dataKey="notas" position="top" offset={10} fontSize={11} fontWeight={800} fill="#10b981" />
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            ) : <EmptyNotice msg="Nenhum registro encontrado." />}
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-10">
+        {activeTab === 'common' && (
           <div className="bg-white dark:bg-slate-900 p-6 md:p-10 rounded-[32px] md:rounded-[48px] shadow-sm border border-slate-200 dark:border-slate-800 transition-colors">
-            <h3 className="text-lg md:text-xl font-black text-slate-800 dark:text-slate-100 mb-6 md:mb-8 uppercase tracking-tight">Evolução do Fluxo</h3>
-            <div className="chart-container-md h-[300px]">
-              {areaData.length > 0 ? (
+            <h3 className="text-xl md:text-2xl font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight mb-8 md:mb-10">Ranking de Analistas <span className="text-[10px] font-normal text-slate-400 normal-case ml-2">(Clique nas barras para filtrar)</span></h3>
+            <div className="chart-container-lg">
+              {barData.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={areaData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <BarChart data={barData} margin={{ top: 30, right: 10, left: -20, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" className="dark:opacity-10" />
-                    <XAxis dataKey="date" fontSize={9} stroke="#94a3b8" tickFormatter={(v) => v.split('-').slice(1).reverse().join('/')} />
-                    <YAxis fontSize={9} stroke="#94a3b8" />
-                    <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', backgroundColor: '#1e293b', color: '#fff' }} itemStyle={{ color: '#fff' }} />
-                    <Area type="monotone" dataKey="processos" name="Processos" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.08} strokeWidth={3} />
-                  </AreaChart>
+                    <XAxis dataKey="name" axisLine={false} tickLine={false} fontSize={10} fontWeight={800} interval={0} tick={{ fill: '#94a3b8' }} />
+                    <YAxis axisLine={false} tickLine={false} fontSize={10} tick={{ fill: '#94a3b8' }} />
+                    <Tooltip cursor={{fill: 'rgba(248, 250, 252, 0.05)'}} contentStyle={{ borderRadius: '12px', border: 'none', backgroundColor: '#1e293b', color: '#fff' }} itemStyle={{ color: '#fff' }} />
+                    <Legend verticalAlign="top" align="right" wrapperStyle={{ paddingTop: '0px', paddingBottom: '30px', fontSize: '10px' }} formatter={(value) => <span className="text-slate-500 dark:text-slate-400 font-bold uppercase">{value}</span>} />
+                    <Bar 
+                      dataKey="processos" 
+                      name="Processos" 
+                      fill="#3b82f6" 
+                      radius={[6, 6, 0, 0]} 
+                      barSize={24}
+                      onClick={(data) => togglePerson(data.id)}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      {barData.map((entry, index) => <Cell key={`c1-${index}`} fillOpacity={entry.opacity} />)}
+                      <LabelList dataKey="processos" position="top" offset={10} fontSize={11} fontWeight={800} fill="#64748b" />
+                    </Bar>
+                    <Bar 
+                      dataKey="notas" 
+                      name="Notas Fiscais" 
+                      fill="#10b981" 
+                      radius={[6, 6, 0, 0]} 
+                      barSize={24}
+                      onClick={(data) => togglePerson(data.id)}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      {barData.map((entry, index) => <Cell key={`c2-${index}`} fillOpacity={entry.opacity} />)}
+                      <LabelList dataKey="notas" position="top" offset={10} fontSize={11} fontWeight={800} fill="#10b981" />
+                    </Bar>
+                  </BarChart>
                 </ResponsiveContainer>
-              ) : <EmptyNotice msg="Sem histórico temporal." />}
+              ) : <EmptyNotice msg="Nenhum registro encontrado." />}
             </div>
           </div>
-          <div className="bg-white dark:bg-slate-900 p-6 md:p-10 rounded-[32px] md:rounded-[48px] shadow-sm border border-slate-200 dark:border-slate-800 transition-colors">
-            <h3 className="text-lg md:text-xl font-black text-slate-800 dark:text-slate-100 mb-6 md:mb-8 uppercase tracking-tight">Mix de Serviços {selectedPeopleIds.length > 0 && <span className="text-blue-500 text-xs ml-2">(Filtrado por Analista)</span>}</h3>
-            <div className="chart-container-md h-[300px]">
+        )}
+
+        <div className={activeTab === 'common' ? "grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-10" : "flex flex-col items-center"}>
+          {activeTab === 'common' && (
+            <div className="bg-white dark:bg-slate-900 p-6 md:p-10 rounded-[32px] md:rounded-[48px] shadow-sm border border-slate-200 dark:border-slate-800 transition-colors">
+              <h3 className="text-lg md:text-xl font-black text-slate-800 dark:text-slate-100 mb-6 md:mb-8 uppercase tracking-tight">Evolução do Fluxo</h3>
+              <div className="chart-container-md h-[300px]">
+                {areaData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={areaData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" className="dark:opacity-10" />
+                      <XAxis dataKey="date" fontSize={9} stroke="#94a3b8" tickFormatter={(v) => v.split('-').slice(1).reverse().join('/')} />
+                      <YAxis fontSize={9} stroke="#94a3b8" />
+                      <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', backgroundColor: '#1e293b', color: '#fff' }} itemStyle={{ color: '#fff' }} />
+                      <Area type="monotone" dataKey="processos" name="Processos" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.08} strokeWidth={3} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                ) : <EmptyNotice msg="Sem histórico temporal." />}
+              </div>
+            </div>
+          )}
+          
+          <div className={`bg-white dark:bg-slate-900 p-6 md:p-10 rounded-[32px] md:rounded-[48px] shadow-sm border border-slate-200 dark:border-slate-800 transition-colors ${activeTab === 'special' ? 'w-full max-w-4xl' : ''}`}>
+            <h3 className="text-lg md:text-xl font-black text-slate-800 dark:text-slate-100 mb-6 md:mb-8 uppercase tracking-tight text-center">
+              {activeTab === 'common' ? 'Mix de Serviços Comuns' : 'Distribuição: Licitação e Diárias'}
+              {selectedPeopleIds.length > 0 && <span className="text-blue-500 text-xs ml-2">(Filtrado por Analista)</span>}
+            </h3>
+            <div className="chart-container-md h-[400px]">
               {(activeTab === 'common' ? pieDataCommon : pieDataSpecial).length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
@@ -341,19 +362,21 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onRefresh }) => {
                       data={activeTab === 'common' ? pieDataCommon : pieDataSpecial} 
                       cx="50%" 
                       cy="45%" 
-                      innerRadius="40%" 
-                      outerRadius="75%" 
+                      innerRadius="45%" 
+                      outerRadius="80%" 
                       paddingAngle={6} 
                       dataKey="value" 
                       stroke="none"
+                      label={activeTab === 'special' ? renderCustomLabel : false}
+                      labelLine={activeTab === 'special'}
                     >
                       {(activeTab === 'common' ? pieDataCommon : pieDataSpecial).map((e, i) => <Cell key={`pi-${i}`} fill={e.color}/>)}
                     </Pie>
                     <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', backgroundColor: '#1e293b', color: '#fff' }} itemStyle={{ color: '#fff' }} />
-                    <Legend wrapperStyle={{ fontSize: '10px' }} formatter={(value) => <span className="text-slate-500 dark:text-slate-400 font-bold uppercase">{value}</span>} />
+                    <Legend verticalAlign="bottom" wrapperStyle={{ fontSize: '12px', paddingTop: '40px' }} formatter={(value) => <span className="text-slate-500 dark:text-slate-400 font-black uppercase">{value}</span>} />
                   </PieChart>
                 </ResponsiveContainer>
-              ) : <EmptyNotice msg="Sem dados de categorias comuns." />}
+              ) : <EmptyNotice msg={activeTab === 'common' ? "Sem dados de categorias comuns." : "Sem registros de Licitação ou Diárias no período."} />}
             </div>
           </div>
         </div>
