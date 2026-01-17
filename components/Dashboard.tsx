@@ -164,22 +164,22 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onRefresh }) => {
   ];
 
   const EmptyNotice = ({ msg }: { msg: string }) => (
-    <div className="flex flex-col items-center justify-center h-full p-10 bg-slate-50 border-2 border-dashed border-slate-200 rounded-[32px] text-slate-300">
+    <div className="flex flex-col items-center justify-center h-full p-10 bg-slate-50 dark:bg-slate-800/50 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-[32px] text-slate-300 dark:text-slate-600 transition-colors">
       <div className="opacity-20"><Icons.Calendar /></div>
-      <p className="mt-4 font-black text-[10px] uppercase tracking-widest text-slate-400 text-center">{msg}</p>
+      <p className="mt-4 font-black text-[10px] uppercase tracking-widest text-slate-400 dark:text-slate-500 text-center">{msg}</p>
     </div>
   );
 
   return (
     <div className="space-y-8 pb-20 fade-in">
       {/* FILTROS */}
-      <div className="bg-white p-6 md:p-8 rounded-[32px] md:rounded-[40px] shadow-sm border border-slate-200 space-y-6 md:space-y-8">
+      <div className="bg-white dark:bg-slate-900 p-6 md:p-8 rounded-[32px] md:rounded-[40px] shadow-sm border border-slate-200 dark:border-slate-800 space-y-6 md:space-y-8 transition-colors">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div className="space-y-1">
-            <h3 className="text-xl font-black text-slate-800 uppercase tracking-tight">Painel Executivo</h3>
-            <p className="text-xs text-slate-400 font-bold">Filtre por período e tipo de serviço</p>
+            <h3 className="text-xl font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight">Painel Executivo</h3>
+            <p className="text-xs text-slate-400 dark:text-slate-500 font-bold">Filtre por período e tipo de serviço</p>
           </div>
-          <div className="flex p-1 bg-slate-100 rounded-2xl border border-slate-200 overflow-x-auto custom-scrollbar">
+          <div className="flex p-1 bg-slate-100 dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-x-auto custom-scrollbar">
             {[
               { id: 'common', label: 'PROCESSOS DE PAGAMENTO' },
               { id: 'special', label: 'LICITAÇÃO / DIÁRIA' }
@@ -187,7 +187,7 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onRefresh }) => {
               <button 
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as TabType)}
-                className={`px-4 md:px-6 py-2 md:py-2.5 rounded-xl text-[9px] md:text-[10px] font-black tracking-widest transition-all whitespace-nowrap ${activeTab === tab.id ? 'bg-white text-blue-600 shadow-sm border border-slate-200' : 'text-slate-400 hover:text-slate-600'}`}
+                className={`px-4 md:px-6 py-2 md:py-2.5 rounded-xl text-[9px] md:text-[10px] font-black tracking-widest transition-all whitespace-nowrap ${activeTab === tab.id ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm border border-slate-200 dark:border-slate-600' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'}`}
               >
                 {tab.label}
               </button>
@@ -195,18 +195,18 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onRefresh }) => {
           </div>
         </div>
 
-        <div className="pt-6 md:pt-8 border-t border-slate-100 space-y-6 md:space-y-8">
+        <div className="pt-6 md:pt-8 border-t border-slate-100 dark:border-slate-800 space-y-6 md:space-y-8">
           <div>
             <div className="flex items-center justify-between mb-4">
-              <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Atalhos de Período</label>
-              <button onClick={handleManualRefresh} disabled={isRefreshing} className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition-all active:scale-95 disabled:opacity-50">
+              <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">Atalhos de Período</label>
+              <button onClick={handleManualRefresh} disabled={isRefreshing} className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all active:scale-95 disabled:opacity-50">
                 <div className={isRefreshing ? 'animate-spin-slow' : ''}><Icons.Refresh /></div>
                 <span className="hidden md:inline text-[10px] font-black uppercase tracking-widest">Sincronizar</span>
               </button>
             </div>
             <div className="flex flex-wrap gap-2">
               {presets.map(p => (
-                <button key={p.id} onClick={() => setActivePreset(p.id)} className={`px-3 md:px-4 py-2 rounded-xl text-[9px] md:text-[10px] font-black border transition-all ${activePreset === p.id ? 'bg-blue-600 text-white border-blue-600 shadow-md' : 'bg-white text-slate-400 border-slate-200 hover:bg-slate-50'}`}>
+                <button key={p.id} onClick={() => setActivePreset(p.id)} className={`px-3 md:px-4 py-2 rounded-xl text-[9px] md:text-[10px] font-black border transition-all ${activePreset === p.id ? 'bg-blue-600 text-white border-blue-600 shadow-md' : 'bg-white dark:bg-slate-800 text-slate-400 dark:text-slate-500 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'}`}>
                   {p.label.toUpperCase()}
                 </button>
               ))}
@@ -215,20 +215,20 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onRefresh }) => {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
             <div className={`${activePreset !== 'custom' ? 'opacity-50 pointer-events-none' : ''}`}>
-              <label className="text-[10px] font-black uppercase text-slate-400 mb-3 tracking-widest">Período Customizado</label>
-              <div className="flex items-center gap-2 md:gap-3 bg-slate-50 p-2 rounded-2xl border border-slate-200 w-fit">
-                <input type="date" value={startDate} onChange={(e) => { setStartDate(e.target.value); setActivePreset('custom'); }} className="bg-transparent text-xs md:text-sm font-bold text-slate-700 outline-none" />
-                <div className="w-px h-6 md:h-8 bg-slate-200"></div>
-                <input type="date" value={endDate} onChange={(e) => { setEndDate(e.target.value); setActivePreset('custom'); }} className="bg-transparent text-xs md:text-sm font-bold text-slate-700 outline-none" />
+              <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 mb-3 tracking-widest">Período Customizado</label>
+              <div className="flex items-center gap-2 md:gap-3 bg-slate-50 dark:bg-slate-800 p-2 rounded-2xl border border-slate-200 dark:border-slate-700 w-fit">
+                <input type="date" value={startDate} onChange={(e) => { setStartDate(e.target.value); setActivePreset('custom'); }} className="bg-transparent text-xs md:text-sm font-bold text-slate-700 dark:text-slate-200 outline-none" />
+                <div className="w-px h-6 md:h-8 bg-slate-200 dark:bg-slate-700"></div>
+                <input type="date" value={endDate} onChange={(e) => { setEndDate(e.target.value); setActivePreset('custom'); }} className="bg-transparent text-xs md:text-sm font-bold text-slate-700 dark:text-slate-200 outline-none" />
               </div>
             </div>
 
             <div>
-              <label className="text-[10px] font-black uppercase text-slate-400 mb-3 tracking-widest">Filtrar Equipe</label>
+              <label className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 mb-3 tracking-widest">Filtrar Equipe</label>
               <div className="flex flex-wrap gap-2">
-                <button onClick={() => setSelectedPeopleIds([])} className={`px-4 py-2 rounded-xl text-[9px] md:text-[10px] font-black border transition-all ${selectedPeopleIds.length === 0 ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-400 border-slate-200'}`}>TODOS</button>
+                <button onClick={() => setSelectedPeopleIds([])} className={`px-4 py-2 rounded-xl text-[9px] md:text-[10px] font-black border transition-all ${selectedPeopleIds.length === 0 ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white dark:bg-slate-800 text-slate-400 dark:text-slate-500 border-slate-200 dark:border-slate-700'}`}>TODOS</button>
                 {state.people.map(p => (
-                  <button key={p.id} onClick={() => togglePerson(p.id)} className={`px-3 md:px-4 py-2 rounded-xl text-[9px] md:text-[10px] font-bold border transition-all ${selectedPeopleIds.includes(p.id) ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-white text-slate-400 border-slate-200'}`}>{p.name}</button>
+                  <button key={p.id} onClick={() => togglePerson(p.id)} className={`px-3 md:px-4 py-2 rounded-xl text-[9px] md:text-[10px] font-bold border transition-all ${selectedPeopleIds.includes(p.id) ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800' : 'bg-white dark:bg-slate-800 text-slate-400 dark:text-slate-500 border-slate-200 dark:border-slate-700'}`}>{p.name}</button>
                 ))}
               </div>
             </div>
@@ -238,25 +238,25 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onRefresh }) => {
 
       {/* CARDS */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
-        <div className="bg-white p-5 md:p-7 rounded-[24px] md:rounded-[32px] shadow-sm border border-slate-200 border-l-[6px] md:border-l-[8px] border-l-blue-500">
-          <p className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">Processos de Pagamento</p>
-          <h4 className="text-3xl md:text-4xl font-black text-slate-900 mt-1 md:mt-2">{commonTasks.reduce((acc, t) => acc + (Number(t.processQuantity) || 0), 0)}</h4>
+        <div className="bg-white dark:bg-slate-900 p-5 md:p-7 rounded-[24px] md:rounded-[32px] shadow-sm border border-slate-200 dark:border-slate-800 border-l-[6px] md:border-l-[8px] border-l-blue-500 transition-colors">
+          <p className="text-[9px] md:text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Processos de Pagamento</p>
+          <h4 className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white mt-1 md:mt-2">{commonTasks.reduce((acc, t) => acc + (Number(t.processQuantity) || 0), 0)}</h4>
         </div>
-        <div className="bg-white p-5 md:p-7 rounded-[24px] md:rounded-[32px] shadow-sm border border-slate-200 border-l-[6px] md:border-l-[8px] border-l-amber-500">
-          <p className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">Licitações / Diárias</p>
-          <h4 className="text-3xl md:text-4xl font-black text-amber-600 mt-1 md:mt-2">{specialTasks.reduce((acc, t) => acc + (Number(t.processQuantity) || 0), 0)}</h4>
+        <div className="bg-white dark:bg-slate-900 p-5 md:p-7 rounded-[24px] md:rounded-[32px] shadow-sm border border-slate-200 dark:border-slate-800 border-l-[6px] md:border-l-[8px] border-l-amber-500 transition-colors">
+          <p className="text-[9px] md:text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Licitações / Diárias</p>
+          <h4 className="text-3xl md:text-4xl font-black text-amber-600 dark:text-amber-500 mt-1 md:mt-2">{specialTasks.reduce((acc, t) => acc + (Number(t.processQuantity) || 0), 0)}</h4>
         </div>
-        <div className="bg-white p-5 md:p-7 rounded-[24px] md:rounded-[32px] shadow-sm border border-slate-200 border-l-[6px] md:border-l-[8px] border-l-emerald-500">
-          <p className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">Notas Fiscais</p>
-          <h4 className="text-3xl md:text-4xl font-black text-emerald-600 mt-1 md:mt-2">{filteredTasks.reduce((acc, t) => acc + (Number(t.invoiceQuantity) || 0), 0)}</h4>
+        <div className="bg-white dark:bg-slate-900 p-5 md:p-7 rounded-[24px] md:rounded-[32px] shadow-sm border border-slate-200 dark:border-slate-800 border-l-[6px] md:border-l-[8px] border-l-emerald-500 transition-colors">
+          <p className="text-[9px] md:text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Notas Fiscais</p>
+          <h4 className="text-3xl md:text-4xl font-black text-emerald-600 dark:text-emerald-500 mt-1 md:mt-2">{filteredTasks.reduce((acc, t) => acc + (Number(t.invoiceQuantity) || 0), 0)}</h4>
         </div>
       </div>
 
       {/* GRÁFICOS */}
       <div className="space-y-8 md:space-y-12">
         {activeTab === 'special' && (
-          <div className="bg-white p-6 md:p-10 rounded-[32px] md:rounded-[48px] shadow-sm border border-slate-200">
-            <h3 className="text-xl md:text-2xl font-black text-slate-800 uppercase tracking-tight mb-8 md:mb-10">Setor Licitações & Diárias</h3>
+          <div className="bg-white dark:bg-slate-900 p-6 md:p-10 rounded-[32px] md:rounded-[48px] shadow-sm border border-slate-200 dark:border-slate-800 transition-colors">
+            <h3 className="text-xl md:text-2xl font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight mb-8 md:mb-10">Setor Licitações & Diárias</h3>
             <div className="chart-container-lg">
               {pieDataSpecial.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
@@ -270,11 +270,12 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onRefresh }) => {
                       paddingAngle={8} 
                       dataKey="value" 
                       label={({name, value}) => `${name}: ${value}`}
+                      stroke="none"
                     >
                       {pieDataSpecial.map((e, i) => <Cell key={`sp-${i}`} fill={e.color} />)}
                     </Pie>
-                    <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-                    <Legend verticalAlign="bottom" height={36}/>
+                    <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', backgroundColor: '#1e293b', color: '#fff' }} itemStyle={{ color: '#fff' }} />
+                    <Legend verticalAlign="bottom" height={36} formatter={(value) => <span className="text-slate-600 dark:text-slate-400 text-[10px] font-bold uppercase">{value}</span>} />
                   </PieChart>
                 </ResponsiveContainer>
               ) : <EmptyNotice msg="Sem dados especiais no período selecionado." />}
@@ -284,17 +285,17 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onRefresh }) => {
 
         {activeTab === 'common' && (
           <div className="space-y-8 md:space-y-12">
-            <div className="bg-white p-6 md:p-10 rounded-[32px] md:rounded-[48px] shadow-sm border border-slate-200">
-              <h3 className="text-xl md:text-2xl font-black text-slate-800 uppercase tracking-tight mb-8 md:mb-10">Ranking de Analistas</h3>
+            <div className="bg-white dark:bg-slate-900 p-6 md:p-10 rounded-[32px] md:rounded-[48px] shadow-sm border border-slate-200 dark:border-slate-800 transition-colors">
+              <h3 className="text-xl md:text-2xl font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight mb-8 md:mb-10">Ranking de Analistas</h3>
               <div className="chart-container-lg">
                 {barData.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={barData} margin={{ top: 20, right: 10, left: -20, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                      <XAxis dataKey="name" axisLine={false} tickLine={false} fontSize={10} fontWeight={800} interval={0} />
-                      <YAxis axisLine={false} tickLine={false} fontSize={10} />
-                      <Tooltip cursor={{fill: '#f8fafc'}} contentStyle={{ borderRadius: '12px' }} />
-                      <Legend verticalAlign="top" align="right" wrapperStyle={{ paddingBottom: '20px', fontSize: '10px' }} />
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" className="dark:opacity-10" />
+                      <XAxis dataKey="name" axisLine={false} tickLine={false} fontSize={10} fontWeight={800} interval={0} tick={{ fill: '#94a3b8' }} />
+                      <YAxis axisLine={false} tickLine={false} fontSize={10} tick={{ fill: '#94a3b8' }} />
+                      <Tooltip cursor={{fill: 'rgba(248, 250, 252, 0.05)'}} contentStyle={{ borderRadius: '12px', border: 'none', backgroundColor: '#1e293b', color: '#fff' }} itemStyle={{ color: '#fff' }} />
+                      <Legend verticalAlign="top" align="right" wrapperStyle={{ paddingBottom: '20px', fontSize: '10px' }} formatter={(value) => <span className="text-slate-500 dark:text-slate-400 font-bold uppercase">{value}</span>} />
                       <Bar dataKey="processos" name="Processos" fill="#3b82f6" radius={[6, 6, 0, 0]} barSize={20} />
                       <Bar dataKey="notas" name="Notas Fiscais" fill="#10b981" radius={[6, 6, 0, 0]} barSize={20} />
                     </BarChart>
@@ -304,33 +305,33 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onRefresh }) => {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-10">
-              <div className="bg-white p-6 md:p-10 rounded-[32px] md:rounded-[48px] shadow-sm border border-slate-200">
-                <h3 className="text-lg md:text-xl font-black text-slate-800 mb-6 md:mb-8 uppercase tracking-tight">Evolução do Fluxo</h3>
-                <div className="chart-container-md">
+              <div className="bg-white dark:bg-slate-900 p-6 md:p-10 rounded-[32px] md:rounded-[48px] shadow-sm border border-slate-200 dark:border-slate-800 transition-colors">
+                <h3 className="text-lg md:text-xl font-black text-slate-800 dark:text-slate-100 mb-6 md:mb-8 uppercase tracking-tight">Evolução do Fluxo</h3>
+                <div className="chart-container-md h-[300px]">
                   {areaData.length > 0 ? (
                     <ResponsiveContainer width="100%" height="100%">
                       <AreaChart data={areaData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" className="dark:opacity-10" />
                         <XAxis dataKey="date" fontSize={9} stroke="#94a3b8" tickFormatter={(v) => v.split('-').slice(1).reverse().join('/')} />
                         <YAxis fontSize={9} stroke="#94a3b8" />
-                        <Tooltip contentStyle={{ borderRadius: '12px' }} />
+                        <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', backgroundColor: '#1e293b', color: '#fff' }} itemStyle={{ color: '#fff' }} />
                         <Area type="monotone" dataKey="processos" name="Processos" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.08} strokeWidth={3} />
                       </AreaChart>
                     </ResponsiveContainer>
                   ) : <EmptyNotice msg="Sem histórico temporal." />}
                 </div>
               </div>
-              <div className="bg-white p-6 md:p-10 rounded-[32px] md:rounded-[48px] shadow-sm border border-slate-200">
-                <h3 className="text-lg md:text-xl font-black text-slate-800 mb-6 md:mb-8 uppercase tracking-tight">Mix de Serviços</h3>
-                <div className="chart-container-md">
+              <div className="bg-white dark:bg-slate-900 p-6 md:p-10 rounded-[32px] md:rounded-[48px] shadow-sm border border-slate-200 dark:border-slate-800 transition-colors">
+                <h3 className="text-lg md:text-xl font-black text-slate-800 dark:text-slate-100 mb-6 md:mb-8 uppercase tracking-tight">Mix de Serviços</h3>
+                <div className="chart-container-md h-[300px]">
                   {pieDataCommon.length > 0 ? (
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
-                        <Pie data={pieDataCommon} cx="50%" cy="45%" innerRadius="40%" outerRadius="75%" paddingAngle={6} dataKey="value">
+                        <Pie data={pieDataCommon} cx="50%" cy="45%" innerRadius="40%" outerRadius="75%" paddingAngle={6} dataKey="value" stroke="none">
                           {pieDataCommon.map((e, i) => <Cell key={`pi-${i}`} fill={e.color}/>)}
                         </Pie>
-                        <Tooltip contentStyle={{ borderRadius: '12px' }} />
-                        <Legend wrapperStyle={{ fontSize: '10px' }} />
+                        <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', backgroundColor: '#1e293b', color: '#fff' }} itemStyle={{ color: '#fff' }} />
+                        <Legend wrapperStyle={{ fontSize: '10px' }} formatter={(value) => <span className="text-slate-500 dark:text-slate-400 font-bold uppercase">{value}</span>} />
                       </PieChart>
                     </ResponsiveContainer>
                   ) : <EmptyNotice msg="Sem dados de categorias comuns." />}
@@ -342,7 +343,7 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onRefresh }) => {
       </div>
 
       {/* IA */}
-      <div className="bg-slate-900 rounded-[40px] md:rounded-[64px] p-8 md:p-12 text-white shadow-2xl relative overflow-hidden mt-8 md:mt-12">
+      <div className="bg-slate-900 dark:bg-slate-800 rounded-[40px] md:rounded-[64px] p-8 md:p-12 text-white shadow-2xl relative overflow-hidden mt-8 md:mt-12">
         <div className="flex flex-col md:flex-row items-center justify-between gap-8 md:gap-12 relative z-10 text-center md:text-left">
           <div className="flex-1">
             <h2 className="text-2xl md:text-3xl font-black uppercase tracking-widest mb-4 md:mb-6">Diagnóstico IA</h2>
@@ -353,7 +354,7 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onRefresh }) => {
           </div>
           {loadingAi && <div className="animate-spin h-10 md:h-14 w-10 md:w-14 border-[4px] md:border-[6px] border-white/20 border-t-white rounded-full"></div>}
           {aiInsight && !loadingAi && (
-            <div className="flex-1 bg-white/5 backdrop-blur-3xl rounded-[24px] md:rounded-[40px] p-6 md:p-10 border border-white/10 max-h-[400px] md:max-h-[500px] overflow-y-auto text-slate-200 text-left">
+            <div className="flex-1 bg-white/5 backdrop-blur-3xl rounded-[24px] md:rounded-[40px] p-6 md:p-10 border border-white/10 max-h-[400px] md:max-h-[500px] overflow-y-auto text-slate-200 text-left custom-scrollbar">
               <div className="text-sm md:text-base leading-relaxed whitespace-pre-wrap">{aiInsight}</div>
               <button onClick={() => setAiInsight(null)} className="mt-8 text-[10px] font-black text-slate-500 hover:text-white uppercase tracking-widest border-t border-white/5 pt-6 w-full text-left">Fechar</button>
             </div>

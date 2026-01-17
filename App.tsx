@@ -14,6 +14,10 @@ const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'people' | 'logs' | 'services'>('dashboard');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    const saved = localStorage.getItem('app-theme');
+    return (saved as 'light' | 'dark') || 'light';
+  });
   
   const [state, setState] = useState<AppState>({ 
     people: [], 
@@ -31,7 +35,15 @@ const App: React.FC = () => {
     }
   };
 
-  // Carregamento inicial do servidor
+  useEffect(() => {
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    localStorage.setItem('app-theme', theme);
+  }, [theme]);
+
   useEffect(() => {
     async function init() {
       await loadData();
@@ -40,7 +52,6 @@ const App: React.FC = () => {
     init();
   }, []);
 
-  // Persistência centralizada no servidor
   const persistState = async (newState: AppState) => {
     setState(newState);
     await apiService.saveState(newState);
@@ -62,6 +73,8 @@ const App: React.FC = () => {
       setActiveTab('dashboard');
     }
   };
+
+  const toggleTheme = () => setTheme(prev => prev === 'light' ? 'dark' : 'light');
 
   const addPerson = (person: Person) => {
     if (state.userRole !== 'master') return;
@@ -112,14 +125,14 @@ const App: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center">
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center transition-colors">
         <div className="relative">
-          <div className="w-20 h-20 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin"></div>
+          <div className="w-20 h-20 border-4 border-blue-100 dark:border-slate-800 border-t-blue-600 rounded-full animate-spin"></div>
           <div className="absolute inset-0 flex items-center justify-center">
              <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
           </div>
         </div>
-        <p className="mt-6 font-bold text-slate-400 uppercase tracking-widest text-xs animate-pulse">Carregando dados do servidor...</p>
+        <p className="mt-6 font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest text-xs animate-pulse">Carregando dados do servidor...</p>
       </div>
     );
   }
@@ -129,25 +142,27 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="flex min-h-screen bg-slate-50 text-slate-900">
+    <div className="flex min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors">
       <Sidebar 
         activeTab={activeTab} 
         setActiveTab={setActiveTab} 
         userRole={state.userRole}
         onRoleChange={setUserRole}
         onLogout={handleLogout}
+        theme={theme}
+        toggleTheme={toggleTheme}
       />
       
       <main className="flex-1 p-6 md:p-10 overflow-auto">
         <header className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-slate-800 mb-1">
+            <h1 className="text-3xl font-bold text-slate-800 dark:text-slate-100 mb-1">
               {activeTab === 'dashboard' && 'Visão Geral'}
               {activeTab === 'people' && 'Gerenciar Equipe'}
               {activeTab === 'logs' && 'Registro Diário'}
               {activeTab === 'services' && 'Tipos de Serviço'}
             </h1>
-            <p className="text-slate-500 font-medium">
+            <p className="text-slate-500 dark:text-slate-400 font-medium">
               {activeTab === 'dashboard' && 'Monitore a produtividade e o desempenho da equipe.'}
               {activeTab === 'people' && 'Adicione ou remova membros da sua equipe.'}
               {activeTab === 'logs' && 'Visualize e gerencie os serviços realizados diariamente.'}
@@ -190,12 +205,12 @@ const App: React.FC = () => {
         )}
 
         {(activeTab === 'people' || activeTab === 'services') && state.userRole === 'basic' && (
-          <div className="bg-white p-12 rounded-3xl shadow-sm border border-slate-200 text-center">
-            <h2 className="text-2xl font-bold text-slate-800 mb-2">Acesso Restrito</h2>
-            <p className="text-slate-500">Perfil operacional sem permissões administrativas.</p>
+          <div className="bg-white dark:bg-slate-900 p-12 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 text-center">
+            <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-2">Acesso Restrito</h2>
+            <p className="text-slate-500 dark:text-slate-400">Perfil operacional sem permissões administrativas.</p>
             <button 
               onClick={() => setActiveTab('dashboard')}
-              className="mt-8 bg-slate-900 text-white px-8 py-3 rounded-2xl font-bold hover:bg-black transition-all"
+              className="mt-8 bg-slate-900 dark:bg-blue-600 text-white px-8 py-3 rounded-2xl font-bold hover:bg-black dark:hover:bg-blue-700 transition-all"
             >
               Retornar ao Painel
             </button>

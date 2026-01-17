@@ -1,67 +1,62 @@
 
+// @ts-ignore
 import { initializeApp } from "firebase/app";
-import { 
-  getFirestore, 
-  doc, 
-  onSnapshot, 
-  setDoc, 
-  getDoc 
-} from "firebase/firestore";
+// @ts-ignore
+import { getFirestore, doc, setDoc, getDoc, onSnapshot } from "firebase/firestore";
 import { AppState } from "../types";
 
 /**
- * IMPORTANTE: Você deve criar um projeto no Firebase Console,
- * ativar o Firestore e colar suas credenciais aqui.
+ * IMPORTANTE: Substitua os valores abaixo com os dados do seu 
+ * Console Firebase > Configurações do Projeto > Seus Aplicativos (Web)
  */
 const firebaseConfig = {
   apiKey: "SUA_API_KEY_AQUI",
   authDomain: "seu-projeto.firebaseapp.com",
   projectId: "seu-projeto-id",
   storageBucket: "seu-projeto.appspot.com",
-  messagingSenderId: "seu-sender-id",
-  appId: "seu-app-id"
+  messagingSenderId: "987654321",
+  appId: "1:987654321:web:abc123def456"
 };
 
-// Inicializa o Firebase apenas se as chaves não forem as padrão
 const isConfigured = firebaseConfig.apiKey !== "SUA_API_KEY_AQUI";
+let db: any = null;
 
-const app = isConfigured ? initializeApp(firebaseConfig) : null;
-const db = app ? getFirestore(app) : null;
+if (isConfigured) {
+  try {
+    const app = initializeApp(firebaseConfig);
+    db = getFirestore(app);
+    console.log("✅ Firebase Database Conectado!");
+  } catch (e) {
+    console.error("❌ Erro ao conectar Firebase:", e);
+  }
+}
 
 export const cloudDb = {
-  listenToGroup(groupId: string, callback: (state: AppState) => void) {
-    if (!db || !groupId) return () => {};
-    
-    const docRef = doc(db, "groups", groupId);
-    return onSnapshot(docRef, (docSnap) => {
-      if (docSnap.exists()) {
-        callback(docSnap.data() as AppState);
-      }
-    });
-  },
-
-  async syncState(groupId: string, state: AppState) {
-    if (!db || !groupId) return;
-    try {
-      const docRef = doc(db, "groups", groupId);
-      await setDoc(docRef, state, { merge: true });
-    } catch (error) {
-      console.error("Erro ao sincronizar com Firestore:", error);
-    }
-  },
-
+  // Busca o estado inicial
   async fetchState(groupId: string): Promise<AppState | null> {
-    if (!db || !groupId) return null;
+    if (!db) return null;
     try {
-      const docRef = doc(db, "groups", groupId);
+      const docRef = doc(db, "productivity_data", groupId);
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
         return docSnap.data() as AppState;
       }
       return null;
-    } catch (error) {
-      console.error("Erro ao buscar do Firestore:", error);
+    } catch (e) {
+      console.error("Erro ao buscar dados na nuvem:", e);
       return null;
+    }
+  },
+
+  // Salva o estado permanentemente
+  async syncState(groupId: string, state: AppState) {
+    if (!db) return;
+    try {
+      const docRef = doc(db, "productivity_data", groupId);
+      // 'merge: true' garante que ele não apague campos novos se houver atualização parcial
+      await setDoc(docRef, state, { merge: true });
+    } catch (e) {
+      console.error("Erro ao sincronizar com a nuvem:", e);
     }
   }
 };
