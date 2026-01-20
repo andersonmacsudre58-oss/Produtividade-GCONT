@@ -7,13 +7,14 @@ import PeopleManager from './components/PeopleManager';
 import DailyLog from './components/DailyLog';
 import ServiceManager from './components/ServiceManager';
 import Login from './components/Login';
-import { DEFAULT_CATEGORIES } from './constants';
+import { DEFAULT_CATEGORIES, Icons } from './constants';
 import { apiService } from './services/api';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'people' | 'logs' | 'services'>('dashboard');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     const saved = localStorage.getItem('app-theme');
     return (saved as 'light' | 'dark') || 'light';
@@ -27,11 +28,14 @@ const App: React.FC = () => {
   });
 
   const loadData = async () => {
+    setIsSyncing(true);
     try {
       const savedState = await apiService.loadState();
       if (savedState) setState(savedState);
     } catch (error) {
       console.error("Erro no carregamento:", error);
+    } finally {
+      setTimeout(() => setIsSyncing(false), 600);
     }
   };
 
@@ -102,7 +106,6 @@ const App: React.FC = () => {
   };
 
   const removeTask = (id: string) => {
-    if (state.userRole !== 'master') return;
     persistState({
       ...state,
       tasks: state.tasks.filter(t => t.id !== id)
@@ -132,7 +135,7 @@ const App: React.FC = () => {
              <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
           </div>
         </div>
-        <p className="mt-6 font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest text-xs animate-pulse">Carregando dados do servidor...</p>
+        <p className="mt-6 font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest text-xs animate-pulse">Iniciando Prod360...</p>
       </div>
     );
   }
@@ -171,7 +174,19 @@ const App: React.FC = () => {
           </div>
           
           <div className="flex items-center gap-3">
-             <div className={`px-4 py-2 rounded-2xl text-[10px] font-bold uppercase tracking-widest shadow-sm ${
+            <button 
+              onClick={loadData}
+              disabled={isSyncing}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-sm transition-all active:scale-95 ${
+                isSyncing ? 'bg-slate-200 dark:bg-slate-800 text-slate-400' : 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 border border-blue-50 dark:border-slate-700 hover:bg-blue-50 dark:hover:bg-slate-700'
+              }`}
+            >
+              <div className={isSyncing ? 'animate-spin' : ''}>
+                <Icons.Refresh />
+              </div>
+              {isSyncing ? 'Sincronizando...' : 'Sincronizar Dados'}
+            </button>
+            <div className={`px-4 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-sm ${
               state.userRole === 'master' ? 'bg-indigo-600 text-white' : 'bg-emerald-600 text-white'
             }`}>
               {state.userRole === 'master' ? 'Acesso Master' : 'Acesso Básico'}
@@ -192,6 +207,7 @@ const App: React.FC = () => {
             onEditTask={editTask}
             onRemoveTask={removeTask}
             userRole={state.userRole}
+            onRefresh={loadData}
           />
         )}
         {activeTab === 'services' && state.userRole === 'master' && (

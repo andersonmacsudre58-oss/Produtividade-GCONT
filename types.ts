@@ -20,6 +20,7 @@ export interface Task {
   invoiceQuantity: number; // Qtd de Notas Fiscais
   date: string; // ISO date string YYYY-MM-DD
   processQuantity: number; // Qtd de Processos (antigo quantity)
+  assignedProcesses: number; // Qtd de Processos Atribuídos
 }
 
 export interface AppState {

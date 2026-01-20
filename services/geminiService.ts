@@ -12,19 +12,19 @@ export async function getProductivityInsights(tasks: Task[], people: Person[], c
     
     Categorias: ${categories.map(c => c.name).join(', ')}
     
-    Dados de Produção:
+    Dados de Produção (Métricas: Atribuídos, Realizados, Notas Fiscais):
     ${tasks.map(t => {
       const p = people.find(person => person.id === t.personId);
       const c = categories.find(cat => cat.id === t.serviceCategoryId);
-      return `- Data: ${t.date} | Colaborador: ${p?.name} | Serviço: ${c?.name} | Processos: ${t.processQuantity} | Notas Fiscais: ${t.invoiceQuantity}.`;
+      return `- Data: ${t.date} | Colaborador: ${p?.name} | Serviço: ${c?.name} | Atribuídos: ${t.assignedProcesses || 0} | Realizados: ${t.processQuantity} | Notas Fiscais: ${t.invoiceQuantity}.`;
     }).join('\n')}
     
-    Forneça uma análise comparativa:
-    1. Quem está com maior volume de notas fiscais vs processos.
-    2. Identifique tendências de sobrecarga ou eficiência.
-    3. Sugira estratégias para equilibrar a produção.
+    Forneça uma análise comparativa e executiva:
+    1. Vazão de Produção: Quem está conseguindo realizar mais em relação ao que foi atribuído (eficiência de entrega).
+    2. Gargalos: Identifique se há alguém com muitos processos atribuídos mas baixa realização.
+    3. Equilíbrio: Sugira como redistribuir processos atribuídos com base no histórico de notas fiscais emitidas.
     
-    Responda em Português do Brasil de forma executiva e profissional.
+    Responda em Português do Brasil de forma executiva, direta e profissional.
   `;
 
   try {
