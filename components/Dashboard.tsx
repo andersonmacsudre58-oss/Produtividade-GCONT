@@ -228,9 +228,9 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onRefresh }) => {
             {tasksForDetailedCharts.reduce((acc, t) => acc + (isSpecialCategory(t.serviceCategoryId) === (activeTab === 'special') ? (Number(t.assignedProcesses) || 0) : 0), 0)}
           </h4>
         </div>
-        <div className="bg-white dark:bg-slate-900 p-5 md:p-7 rounded-[24px] md:rounded-[32px] shadow-sm border border-slate-200 dark:border-slate-800 border-l-[6px] border-l-blue-500 transition-colors">
+        <div className="bg-white dark:bg-slate-900 p-5 md:p-7 rounded-[24px] md:rounded-[32px] shadow-sm border border-slate-200 dark:border-slate-800 border-l-[6px] border-l-amber-500 transition-colors">
           <p className="text-[9px] md:text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Realizados {activeTab === 'special' ? '(Esp.)' : ''}</p>
-          <h4 className="text-3xl md:text-4xl font-black text-blue-600 dark:text-blue-500 mt-1 md:mt-2">
+          <h4 className="text-3xl md:text-4xl font-black text-amber-600 dark:text-amber-500 mt-1 md:mt-2">
             {tasksForDetailedCharts.reduce((acc, t) => acc + (isSpecialCategory(t.serviceCategoryId) === (activeTab === 'special') ? (Number(t.processQuantity) || 0) : 0), 0)}
           </h4>
         </div>
@@ -240,9 +240,9 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onRefresh }) => {
             {tasksForDetailedCharts.reduce((acc, t) => acc + (isSpecialCategory(t.serviceCategoryId) === (activeTab === 'special') ? (Number(t.invoiceQuantity) || 0) : 0), 0)}
           </h4>
         </div>
-        <div className="bg-white dark:bg-slate-900 p-5 md:p-7 rounded-[24px] md:rounded-[32px] shadow-sm border border-slate-200 dark:border-slate-800 border-l-[6px] border-l-amber-500 transition-colors">
+        <div className="bg-white dark:bg-slate-900 p-5 md:p-7 rounded-[24px] md:rounded-[32px] shadow-sm border border-slate-200 dark:border-slate-800 border-l-[6px] border-l-blue-500 transition-colors">
           <p className="text-[9px] md:text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Tipos de Serviço</p>
-          <h4 className="text-3xl md:text-4xl font-black text-amber-600 dark:text-amber-500 mt-1 md:mt-2">
+          <h4 className="text-3xl md:text-4xl font-black text-blue-600 dark:text-blue-500 mt-1 md:mt-2">
             {(activeTab === 'common' ? commonPieData : specialPieData).length} <span className="text-xs uppercase opacity-40">Ativos</span>
           </h4>
         </div>
@@ -272,8 +272,8 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onRefresh }) => {
                         <LabelList dataKey="atribuidos" position="top" style={{ fill: '#6366f1', fontSize: 10, fontWeight: 900 }} />
                         {commonBarData.map((entry, index) => <Cell key={`c0-${index}`} fillOpacity={entry.opacity} />)}
                       </Bar>
-                      <Bar dataKey="realizados" name="Realizados" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={24} onClick={(data) => togglePerson(data.id)} style={{ cursor: 'pointer' }}>
-                        <LabelList dataKey="realizados" position="top" style={{ fill: '#3b82f6', fontSize: 10, fontWeight: 900 }} />
+                      <Bar dataKey="realizados" name="Realizados" fill="#f59e0b" radius={[4, 4, 0, 0]} barSize={24} onClick={(data) => togglePerson(data.id)} style={{ cursor: 'pointer' }}>
+                        <LabelList dataKey="realizados" position="top" style={{ fill: '#f59e0b', fontSize: 10, fontWeight: 900 }} />
                         {commonBarData.map((entry, index) => <Cell key={`c1-${index}`} fillOpacity={entry.opacity} />)}
                       </Bar>
                       <Bar dataKey="notas" name="Notas Fiscais" fill="#10b981" radius={[4, 4, 0, 0]} barSize={24} onClick={(data) => togglePerson(data.id)} style={{ cursor: 'pointer' }}>
@@ -298,8 +298,8 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onRefresh }) => {
                         <XAxis dataKey="date" fontSize={9} stroke="#94a3b8" tickFormatter={(v) => v.split('-').slice(1).reverse().join('/')} />
                         <YAxis fontSize={9} stroke="#94a3b8" />
                         <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', backgroundColor: '#1e293b', color: '#fff' }} />
-                        <Area type="monotone" dataKey="realizados" name="Realizados" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.1} strokeWidth={4}>
-                           <LabelList dataKey="realizados" position="top" offset={10} style={{ fill: '#3b82f6', fontSize: 10, fontWeight: 900 }} />
+                        <Area type="monotone" dataKey="realizados" name="Realizados" stroke="#f59e0b" fill="#f59e0b" fillOpacity={0.1} strokeWidth={4}>
+                           <LabelList dataKey="realizados" position="top" offset={10} style={{ fill: '#f59e0b', fontSize: 10, fontWeight: 900 }} />
                         </Area>
                       </AreaChart>
                     </ResponsiveContainer>
