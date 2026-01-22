@@ -6,16 +6,12 @@ import { supabaseService } from "./supabase";
 export const apiService = {
   async loadState(): Promise<AppState | null> {
     try {
-      // 1. Tenta buscar no Supabase (Banco Real)
       const cloudData = await supabaseService.getState();
       
       if (cloudData) {
-        // Cache local para performance
         await dbService.save(cloudData);
         return cloudData;
       }
-
-      // 2. Fallback: Offline ou primeira vez
       return await dbService.load();
     } catch (error) {
       console.error("Erro no carregamento Supabase:", error);
@@ -23,18 +19,24 @@ export const apiService = {
     }
   },
 
-  async saveState(state: AppState): Promise<boolean> {
+  async saveState(state: AppState): Promise<AppState | null> {
     try {
-      // 1. Salva localmente (instantâneo)
+      // 1. Salva localmente para persistência offline imediata
       await dbService.save(state);
 
-      // 2. Sincroniza com Supabase (Persistência)
-      await supabaseService.saveState(state);
+      // 2. Sincroniza com Supabase usando lógica de MERGE
+      // O mergedState contém os dados locais + quaisquer dados que outros computadores enviaram
+      const mergedState = await supabaseService.saveState(state);
       
-      return true;
+      if (mergedState) {
+        await dbService.save(mergedState);
+        return mergedState;
+      }
+      
+      return state;
     } catch (error) {
       console.error("Erro ao salvar dados:", error);
-      return false;
+      return null;
     }
   }
 };

@@ -57,8 +57,17 @@ const App: React.FC = () => {
   }, []);
 
   const persistState = async (newState: AppState) => {
+    // Atualiza localmente primeiro para resposta instantânea
     setState(newState);
-    await apiService.saveState(newState);
+    
+    // Tenta salvar e fazer o merge no servidor
+    const mergedState = await apiService.saveState(newState);
+    
+    // Se o servidor retornou um estado mergeado (com dados de outros computadores),
+    // atualizamos o nosso estado local para ficar tudo igual.
+    if (mergedState) {
+      setState(mergedState);
+    }
   };
 
   const handleLogin = (role: UserRole) => {
