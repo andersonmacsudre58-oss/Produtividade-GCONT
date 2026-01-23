@@ -1,5 +1,5 @@
 
-export type UserRole = 'master' | 'basic';
+export type UserRole = 'ANDERSON' | 'basic';
 
 export interface ServiceCategory {
   id: string;
@@ -17,13 +17,12 @@ export interface Task {
   id: string;
   personId: string;
   serviceCategoryId: string; 
-  invoiceQuantity: number;
-  date: string;
-  processQuantity: number;
-  assignedProcesses: number;
+  invoiceQuantity: number; // Qtd de Notas Fiscais
+  date: string; // ISO date string YYYY-MM-DD
+  processQuantity: number; // Qtd de Processos (antigo quantity)
+  assignedProcesses: number; // Qtd de Processos Atribuídos
 }
 
-// Added missing Particularity interface for occurrence tracking
 export interface Particularity {
   id: string;
   personId: string;
@@ -35,8 +34,7 @@ export interface Particularity {
 export interface AppState {
   people: Person[];
   tasks: Task[];
-  serviceCategories: ServiceCategory[];
-  // Added particularities to the global state
   particularities: Particularity[];
+  serviceCategories: ServiceCategory[];
   userRole: UserRole;
 }

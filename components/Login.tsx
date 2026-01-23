@@ -16,9 +16,9 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     e.preventDefault();
     setError('');
 
-    // Credenciais Master
+    // Credenciais ANDERSON
     if (username.toUpperCase() === 'ANDERSON' && password === '1') {
-      onLogin('master');
+      onLogin('ANDERSON');
       return;
     }
 
@@ -40,7 +40,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
             </svg>
           </div>
-          <h1 className="text-4xl font-extrabold text-slate-800 dark:text-white tracking-tight">Prod360</h1>
+          <h1 className="text-4xl font-extrabold text-slate-800 dark:text-white tracking-tight">Gerência Contábil</h1>
           <p className="text-slate-500 dark:text-slate-400 mt-2 font-medium">Gestão Inteligente de Produtividade</p>
         </div>
 
@@ -94,7 +94,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
           <div className="mt-8 pt-6 border-t border-slate-50 dark:border-slate-800">
             <div className="flex justify-between items-center text-xs text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest">
-              <span>Nível Master</span>
+              <span>Nível ANDERSON</span>
               <span className="text-slate-300 dark:text-slate-800">|</span>
               <span>Nível Básico</span>
             </div>
@@ -102,7 +102,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
         </div>
 
         <p className="text-center text-slate-400 dark:text-slate-600 text-sm mt-8">
-          © 2024 Prod360. Todos os direitos reservados.
+          © 2024 Gerência Contábil. Todos os direitos reservados.
         </p>
       </div>
     </div>

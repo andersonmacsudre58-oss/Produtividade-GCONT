@@ -21,20 +21,28 @@ const App: React.FC = () => {
     return (saved as 'light' | 'dark') || 'light';
   });
   
-  // Updated state initialization to include particularities
   const [state, setState] = useState<AppState>({ 
     people: [], 
     tasks: [], 
-    serviceCategories: DEFAULT_CATEGORIES,
     particularities: [],
-    userRole: 'master' 
+    serviceCategories: DEFAULT_CATEGORIES,
+    userRole: 'ANDERSON' 
   });
 
   const loadData = async () => {
     setIsSyncing(true);
     try {
       const savedState = await apiService.loadState();
-      if (savedState) setState(savedState);
+      if (savedState) {
+        setState({
+          ...state,
+          ...savedState,
+          particularities: savedState.particularities || [],
+          tasks: savedState.tasks || [],
+          people: savedState.people || [],
+          serviceCategories: savedState.serviceCategories || DEFAULT_CATEGORIES
+        });
+      }
     } catch (error) {
       console.error("Erro no carregamento:", error);
     } finally {
@@ -60,8 +68,18 @@ const App: React.FC = () => {
   }, []);
 
   const persistState = async (newState: AppState) => {
+    // Atualiza o estado da UI imediatamente para feedback instantâneo
     setState(newState);
-    await apiService.saveState(newState);
+    
+    // Sincroniza em background
+    try {
+      const syncedState = await apiService.saveState(newState);
+      if (syncedState) {
+        setState(syncedState);
+      }
+    } catch (e) {
+      console.error("Falha na sincronização:", e);
+    }
   };
 
   const handleLogin = (role: UserRole) => {
@@ -84,61 +102,63 @@ const App: React.FC = () => {
   const toggleTheme = () => setTheme(prev => prev === 'light' ? 'dark' : 'light');
 
   const addPerson = (person: Person) => {
-    if (state.userRole !== 'master') return;
-    persistState({ ...state, people: [...state.people, person] });
+    if (state.userRole !== 'ANDERSON') return;
+    persistState({ ...state, people: [...(state.people || []), person] });
   };
 
   const removePerson = (id: string) => {
-    if (state.userRole !== 'master') return;
+    if (state.userRole !== 'ANDERSON') return;
     persistState({
       ...state,
-      people: state.people.filter(p => p.id !== id),
-      tasks: state.tasks.filter(t => t.personId !== id),
-      particularities: state.particularities.filter(p => p.personId !== id)
+      people: (state.people || []).filter(p => p.id !== id),
+      tasks: (state.tasks || []).filter(t => t.personId !== id),
+      particularities: (state.particularities || []).filter(p => p.personId !== id)
     });
   };
 
   const addTask = (task: Task) => {
-    persistState({ ...state, tasks: [...state.tasks, task] });
+    persistState({ ...state, tasks: [...(state.tasks || []), task] });
   };
 
   const editTask = (updatedTask: Task) => {
     persistState({
       ...state,
-      tasks: state.tasks.map(t => t.id === updatedTask.id ? updatedTask : t)
+      tasks: (state.tasks || []).map(t => t.id === updatedTask.id ? updatedTask : t)
     });
   };
 
   const removeTask = (id: string) => {
     persistState({
       ...state,
-      tasks: state.tasks.filter(t => t.id !== id)
+      tasks: (state.tasks || []).filter(t => t.id !== id)
     });
   };
 
-  const addServiceCategory = (cat: ServiceCategory) => {
-    if (state.userRole !== 'master') return;
-    persistState({ ...state, serviceCategories: [...state.serviceCategories, cat] });
-  };
-
-  const removeServiceCategory = (id: string) => {
-    if (state.userRole !== 'master') return;
-    persistState({
-      ...state,
-      serviceCategories: state.serviceCategories.filter(c => c.id !== id),
-      tasks: state.tasks.filter(t => t.serviceCategoryId !== id)
-    });
-  };
-
-  // Added logic for managing particularities
   const addParticularity = (p: Particularity) => {
-    persistState({ ...state, particularities: [...state.particularities, p] });
+    persistState({ 
+      ...state, 
+      particularities: [...(state.particularities || []), p] 
+    });
   };
 
   const removeParticularity = (id: string) => {
     persistState({
       ...state,
-      particularities: state.particularities.filter(p => p.id !== id)
+      particularities: (state.particularities || []).filter(p => p.id !== id)
+    });
+  };
+
+  const addServiceCategory = (cat: ServiceCategory) => {
+    if (state.userRole !== 'ANDERSON') return;
+    persistState({ ...state, serviceCategories: [...(state.serviceCategories || []), cat] });
+  };
+
+  const removeServiceCategory = (id: string) => {
+    if (state.userRole !== 'ANDERSON') return;
+    persistState({
+      ...state,
+      serviceCategories: (state.serviceCategories || []).filter(c => c.id !== id),
+      tasks: (state.tasks || []).filter(t => t.serviceCategoryId !== id)
     });
   };
 
@@ -151,7 +171,7 @@ const App: React.FC = () => {
              <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
           </div>
         </div>
-        <p className="mt-6 font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest text-xs animate-pulse">Iniciando Prod360...</p>
+        <p className="mt-6 font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest text-xs animate-pulse">Iniciando Gerência Contábil...</p>
       </div>
     );
   }
@@ -163,8 +183,8 @@ const App: React.FC = () => {
   return (
     <div className="flex min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors">
       <Sidebar 
-        activeTab={activeTab as any} 
-        setActiveTab={setActiveTab as any} 
+        activeTab={activeTab} 
+        setActiveTab={setActiveTab} 
         userRole={state.userRole}
         onRoleChange={setUserRole}
         onLogout={handleLogout}
@@ -179,11 +199,15 @@ const App: React.FC = () => {
               {activeTab === 'dashboard' && 'Visão Geral'}
               {activeTab === 'people' && 'Gerenciar Equipe'}
               {activeTab === 'logs' && 'Registro Diário'}
+              {activeTab === 'particularities' && 'Particularidades'}
               {activeTab === 'services' && 'Tipos de Serviço'}
-              {activeTab === 'particularities' && 'Ocorrências'}
             </h1>
             <p className="text-slate-500 dark:text-slate-400 font-medium">
-              Produtividade e Gestão de Colaboradores.
+              {activeTab === 'dashboard' && 'Monitore a produtividade e o desempenho da equipe.'}
+              {activeTab === 'people' && 'Adicione ou remova membros da sua equipe.'}
+              {activeTab === 'logs' && 'Visualize e gerencie os serviços realizados diariamente.'}
+              {activeTab === 'particularities' && 'Registre ocorrências como consultas, cursos ou licenças.'}
+              {activeTab === 'services' && 'Personalize as categorias e gerencie a base de dados.'}
             </p>
           </div>
           
@@ -201,15 +225,15 @@ const App: React.FC = () => {
               {isSyncing ? 'Sincronizando...' : 'Sincronizar Dados'}
             </button>
             <div className={`px-4 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-sm ${
-              state.userRole === 'master' ? 'bg-indigo-600 text-white' : 'bg-emerald-600 text-white'
+              state.userRole === 'ANDERSON' ? 'bg-indigo-600 text-white' : 'bg-emerald-600 text-white'
             }`}>
-              {state.userRole === 'master' ? 'Acesso Master' : 'Acesso Básico'}
+              {state.userRole === 'ANDERSON' ? 'Acesso ANDERSON' : 'Acesso Básico'}
             </div>
           </div>
         </header>
 
         {activeTab === 'dashboard' && <Dashboard state={state} onRefresh={loadData} />}
-        {activeTab === 'people' && state.userRole === 'master' && (
+        {activeTab === 'people' && state.userRole === 'ANDERSON' && (
           <PeopleManager people={state.people} onAdd={addPerson} onRemove={removePerson} />
         )}
         {activeTab === 'logs' && (
@@ -219,12 +243,20 @@ const App: React.FC = () => {
             categories={state.serviceCategories}
             onAddTask={addTask} 
             onEditTask={editTask}
+            onRefresh={loadData}
             onRemoveTask={removeTask}
             userRole={state.userRole}
-            onRefresh={loadData}
           />
         )}
-        {activeTab === 'services' && state.userRole === 'master' && (
+        {activeTab === 'particularities' && (
+          <ParticularityManager 
+            particularities={state.particularities || []}
+            people={state.people || []}
+            onAdd={addParticularity}
+            onRemove={removeParticularity}
+          />
+        )}
+        {activeTab === 'services' && state.userRole === 'ANDERSON' && (
           <ServiceManager 
             categories={state.serviceCategories} 
             onAdd={addServiceCategory} 
@@ -233,13 +265,18 @@ const App: React.FC = () => {
             onImport={(imported) => persistState(imported)}
           />
         )}
-        {activeTab === 'particularities' && (
-          <ParticularityManager
-            particularities={state.particularities}
-            people={state.people}
-            onAdd={addParticularity}
-            onRemove={removeParticularity}
-          />
+
+        {(activeTab === 'people' || activeTab === 'services') && state.userRole === 'basic' && (
+          <div className="bg-white dark:bg-slate-900 p-12 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 text-center">
+            <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-2">Acesso Restrito</h2>
+            <p className="text-slate-500 dark:text-slate-400">Perfil operacional sem permissões administrativas.</p>
+            <button 
+              onClick={() => setActiveTab('dashboard')}
+              className="mt-8 bg-slate-900 dark:bg-blue-600 text-white px-8 py-3 rounded-2xl font-bold hover:bg-black dark:hover:bg-blue-700 transition-all"
+            >
+              Retornar ao Painel
+            </button>
+          </div>
         )}
       </main>
     </div>
