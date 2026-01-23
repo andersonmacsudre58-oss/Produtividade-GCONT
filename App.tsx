@@ -31,12 +31,15 @@ const App: React.FC = () => {
 
   const loadData = async () => {
     setIsSyncing(true);
+    // Preservamos o role atual para não cair para 'basic' durante a sync
+    const currentRole = state.userRole;
+    
     try {
       const savedState = await apiService.loadState();
       if (savedState) {
         setState({
-          ...state,
           ...savedState,
+          userRole: currentRole, // Mantém o nível ANDERSON se ele já estiver logado
           particularities: savedState.particularities || [],
           tasks: savedState.tasks || [],
           people: savedState.people || [],
@@ -68,14 +71,18 @@ const App: React.FC = () => {
   }, []);
 
   const persistState = async (newState: AppState) => {
-    // Atualiza o estado da UI imediatamente para feedback instantâneo
+    // Atualiza o estado da UI imediatamente
     setState(newState);
     
-    // Sincroniza em background
     try {
       const syncedState = await apiService.saveState(newState);
       if (syncedState) {
-        setState(syncedState);
+        // Preserva o role local após a sync
+        const currentRole = newState.userRole;
+        setState({
+          ...syncedState,
+          userRole: currentRole
+        });
       }
     } catch (e) {
       console.error("Falha na sincronização:", e);

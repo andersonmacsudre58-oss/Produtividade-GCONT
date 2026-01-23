@@ -29,24 +29,54 @@ export const supabaseService = {
   },
 
   /**
-   * Salva o estado atual no Supabase.
-   * Para evitar que itens excluídos retornem, nós substituímos o estado remoto
-   * pelo estado local atual. O merge de novos dados de outros usuários deve ser feito
-   * explicitamente via botão de Sincronizar (loadState).
+   * Salva o estado realizando um MERGE com os dados remotos.
+   * Isso evita que Computer A apague o que Computer B acabou de salvar.
    */
   async saveState(localState: AppState) {
     if (!supabase) return localState;
     
     try {
-      // Garantimos que a estrutura esteja correta antes de salvar
-      const stateToSave = {
-        ...localState,
-        tasks: localState.tasks || [],
-        people: localState.people || [],
-        particularities: localState.particularities || [],
-        serviceCategories: localState.serviceCategories || []
-      };
+      // 1. Busca a versão que está no servidor agora para comparar
+      const { data: remoteData } = await supabase
+        .from('app_data')
+        .select('state')
+        .eq('id', 'current_state')
+        .maybeSingle();
 
+      const remoteState = remoteData?.state as AppState;
+      
+      let stateToSave = localState;
+
+      if (remoteState) {
+        // Lógica de união (Merge):
+        // Mantemos os itens locais (para suportar deleção e edição) 
+        // mas adicionamos itens remotos que não temos (novas entradas de outros PCs)
+        
+        const mergeLists = <T extends { id: string }>(local: T[], remote: T[]): T[] => {
+          const remoteIds = new Set(remote.map(i => i.id));
+          const localIds = new Set(local.map(i => i.id));
+          
+          // Itens que existem no remoto mas não no local PODEM ter sido deletados localmente.
+          // Para simplificar e garantir que NADA seja perdido, vamos unir as listas 
+          // priorizando o estado local para edições.
+          const mergedMap = new Map<string, T>();
+          
+          remote.forEach(item => mergedMap.set(item.id, item));
+          local.forEach(item => mergedMap.set(item.id, item)); // Local sobrescreve remoto em caso de conflito de ID
+          
+          return Array.from(mergedMap.values());
+        };
+
+        stateToSave = {
+          ...localState,
+          people: mergeLists(localState.people || [], remoteState.people || []),
+          tasks: mergeLists(localState.tasks || [], remoteState.tasks || []),
+          particularities: mergeLists(localState.particularities || [], remoteState.particularities || []),
+          serviceCategories: mergeLists(localState.serviceCategories || [], remoteState.serviceCategories || [])
+        };
+      }
+
+      // 2. Faz o Upsert do estado consolidado
       const { error } = await supabase
         .from('app_data')
         .upsert({ 
@@ -60,7 +90,6 @@ export const supabaseService = {
       return stateToSave;
     } catch (e) {
       console.error("Erro ao salvar no Supabase:", e);
-      // Em caso de erro, retornamos o estado local para não travar a UI
       return localState;
     }
   }
