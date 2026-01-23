@@ -27,20 +27,22 @@ const App: React.FC = () => {
     tasks: [], 
     particularities: [],
     serviceCategories: DEFAULT_CATEGORIES,
-    userRole: 'master' 
+    userRole: 'master',
+    updatedAt: 0
   });
 
-  // Função robusta de carregamento
   const loadData = useCallback(async (showLoading = false) => {
     if (showLoading) setIsSyncing(true);
     try {
-      const savedState = await apiService.loadState();
-      if (savedState) {
-        setState(prev => ({
-          ...prev,
-          ...savedState,
-          userRole: prev.userRole // Preserva o role da sessão atual
-        }));
+      const bestState = await apiService.loadState();
+      if (bestState) {
+        setState(prev => {
+          // Só atualiza se o dado vindo do load for mais novo que o que está em tela
+          if (bestState.updatedAt >= prev.updatedAt) {
+            return { ...bestState, userRole: prev.userRole };
+          }
+          return prev;
+        });
       }
     } catch (error) {
       console.error("Erro ao carregar dados:", error);
@@ -49,29 +51,30 @@ const App: React.FC = () => {
     }
   }, []);
 
-  // Persistência com debounce implícito (pela lógica de eventos do React)
-  const persistState = async (newState: AppState) => {
-    // Atualização otimista da UI
+  const persistState = async (newStateData: Omit<AppState, 'updatedAt'>) => {
+    const newState: AppState = {
+      ...newStateData,
+      updatedAt: Date.now()
+    };
+    
+    // Atualização otimista
     setState(newState);
     
     try {
       await apiService.saveState(newState);
     } catch (e) {
-      console.error("Erro na persistência remota:", e);
+      console.error("Erro na persistência:", e);
     }
   };
 
-  // Efeito Inicial e Real-time
   useEffect(() => {
     if (isLoggedIn) {
       loadData(true).then(() => setIsLoading(false));
 
-      // Inscreve para atualizações de outros usuários
       const unsubscribe = supabaseService.subscribeToChanges((remoteState) => {
-        // Só atualizamos se o dado remoto for diferente (evita loops)
         setState(prev => {
-          if (JSON.stringify(prev.tasks) !== JSON.stringify(remoteState.tasks) ||
-              JSON.stringify(prev.people) !== JSON.stringify(remoteState.people)) {
+          // Regra de Ouro: Só aceita o dado da nuvem se ele for estritamente mais novo que o atual
+          if (remoteState.updatedAt > prev.updatedAt) {
             return { ...prev, ...remoteState };
           }
           return prev;
@@ -84,7 +87,6 @@ const App: React.FC = () => {
     }
   }, [isLoggedIn, loadData]);
 
-  // Gerenciamento de Tema
   useEffect(() => {
     if (theme === 'dark') document.documentElement.classList.add('dark');
     else document.documentElement.classList.remove('dark');
@@ -103,65 +105,39 @@ const App: React.FC = () => {
 
   const toggleTheme = () => setTheme(prev => prev === 'light' ? 'dark' : 'light');
 
-  // Actions de Estado (Todas chamam persistState)
-  const addPerson = (person: Person) => {
-    const newState = { ...state, people: [...state.people, person] };
-    persistState(newState);
-  };
+  const addPerson = (person: Person) => persistState({ ...state, people: [...state.people, person] });
+  const removePerson = (id: string) => persistState({
+    ...state,
+    people: state.people.filter(p => p.id !== id),
+    tasks: state.tasks.filter(t => t.personId !== id),
+    particularities: state.particularities.filter(p => p.personId !== id)
+  });
 
-  const removePerson = (id: string) => {
-    const newState = {
-      ...state,
-      people: state.people.filter(p => p.id !== id),
-      tasks: state.tasks.filter(t => t.personId !== id),
-      particularities: state.particularities.filter(p => p.personId !== id)
-    };
-    persistState(newState);
-  };
+  const addTask = (task: Task) => persistState({ ...state, tasks: [...state.tasks, task] });
+  const editTask = (updatedTask: Task) => persistState({
+    ...state,
+    tasks: state.tasks.map(t => t.id === updatedTask.id ? updatedTask : t)
+  });
+  const removeTask = (id: string) => persistState({ ...state, tasks: state.tasks.filter(t => t.id !== id) });
 
-  const addTask = (task: Task) => {
-    persistState({ ...state, tasks: [...state.tasks, task] });
-  };
+  const addParticularity = (p: Particularity) => persistState({ ...state, particularities: [...state.particularities, p] });
+  const removeParticularity = (id: string) => persistState({
+    ...state,
+    particularities: state.particularities.filter(p => p.id !== id)
+  });
 
-  const editTask = (updatedTask: Task) => {
-    persistState({
-      ...state,
-      tasks: state.tasks.map(t => t.id === updatedTask.id ? updatedTask : t)
-    });
-  };
-
-  const removeTask = (id: string) => {
-    persistState({ ...state, tasks: state.tasks.filter(t => t.id !== id) });
-  };
-
-  const addParticularity = (p: Particularity) => {
-    persistState({ ...state, particularities: [...state.particularities, p] });
-  };
-
-  const removeParticularity = (id: string) => {
-    persistState({
-      ...state,
-      particularities: state.particularities.filter(p => p.id !== id)
-    });
-  };
-
-  const addServiceCategory = (cat: ServiceCategory) => {
-    persistState({ ...state, serviceCategories: [...state.serviceCategories, cat] });
-  };
-
-  const removeServiceCategory = (id: string) => {
-    persistState({
-      ...state,
-      serviceCategories: state.serviceCategories.filter(c => c.id !== id),
-      tasks: state.tasks.filter(t => t.serviceCategoryId !== id)
-    });
-  };
+  const addServiceCategory = (cat: ServiceCategory) => persistState({ ...state, serviceCategories: [...state.serviceCategories, cat] });
+  const removeServiceCategory = (id: string) => persistState({
+    ...state,
+    serviceCategories: state.serviceCategories.filter(c => c.id !== id),
+    tasks: state.tasks.filter(t => t.serviceCategoryId !== id)
+  });
 
   if (isLoading) {
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center">
         <div className="w-16 h-16 border-4 border-blue-600/20 border-t-blue-600 rounded-full animate-spin"></div>
-        <p className="mt-4 font-black text-[10px] text-slate-400 uppercase tracking-widest">Carregando Fluxo...</p>
+        <p className="mt-4 font-black text-[10px] text-slate-400 uppercase tracking-widest">Sincronizando Banco...</p>
       </div>
     );
   }
@@ -174,7 +150,7 @@ const App: React.FC = () => {
         activeTab={activeTab} 
         setActiveTab={setActiveTab} 
         userRole={state.userRole}
-        onRoleChange={(role) => persistState({...state, userRole: role})}
+        onRoleChange={(role) => setState({...state, userRole: role})}
         onLogout={handleLogout}
         theme={theme}
         toggleTheme={toggleTheme}
@@ -183,14 +159,18 @@ const App: React.FC = () => {
       <main className="flex-1 p-6 md:p-10 overflow-auto">
         <header className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-slate-800 dark:text-slate-100 mb-1 capitalize">{activeTab}</h1>
-            <p className="text-sm text-slate-500">Gestão de produtividade em tempo real.</p>
+            <h1 className="text-3xl font-bold text-slate-800 dark:text-slate-100 mb-1 capitalize tracking-tight">{activeTab}</h1>
+            <p className="text-sm text-slate-500 font-medium">Fluxo de dados seguro com timestamp.</p>
           </div>
           
           <div className="flex items-center gap-3">
-            {isSyncing && (
-               <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 text-[10px] font-black rounded-full animate-pulse">
+            {isSyncing ? (
+               <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 text-[10px] font-black rounded-xl animate-pulse border border-blue-100 dark:border-blue-900/50">
                  <Icons.Refresh /> SINCRONIZANDO
+               </div>
+            ) : (
+              <div className="flex items-center gap-2 px-4 py-2 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 text-[10px] font-black rounded-xl border border-emerald-100 dark:border-emerald-900/50">
+                 ✓ DADOS PROTEGIDOS
                </div>
             )}
             <div className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest ${state.userRole === 'master' ? 'bg-indigo-600 text-white' : 'bg-emerald-600 text-white'}`}>

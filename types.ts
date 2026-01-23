@@ -37,4 +37,5 @@ export interface AppState {
   particularities: Particularity[];
   serviceCategories: ServiceCategory[];
   userRole: UserRole;
+  updatedAt: number; // Timestamp da última alteração
 }
