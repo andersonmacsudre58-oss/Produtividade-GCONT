@@ -34,7 +34,6 @@ const App: React.FC = () => {
     try {
       const savedState = await apiService.loadState();
       if (savedState) {
-        // Garante que campos novos existam mesmo em dados antigos
         setState({
           ...state,
           ...savedState,
@@ -69,13 +68,17 @@ const App: React.FC = () => {
   }, []);
 
   const persistState = async (newState: AppState) => {
+    // Atualiza o estado da UI imediatamente para feedback instantâneo
     setState(newState);
-    const mergedState = await apiService.saveState(newState);
-    if (mergedState) {
-      setState({
-        ...mergedState,
-        particularities: mergedState.particularities || []
-      });
+    
+    // Sincroniza em background
+    try {
+      const syncedState = await apiService.saveState(newState);
+      if (syncedState) {
+        setState(syncedState);
+      }
+    } catch (e) {
+      console.error("Falha na sincronização:", e);
     }
   };
 

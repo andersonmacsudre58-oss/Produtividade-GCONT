@@ -21,22 +21,24 @@ export const apiService = {
 
   async saveState(state: AppState): Promise<AppState | null> {
     try {
-      // 1. Salva localmente para persistência offline imediata
+      // 1. Salva localmente primeiro (IndexedDB) para garantir persistência offline
       await dbService.save(state);
 
-      // 2. Sincroniza com Supabase usando lógica de MERGE
-      // O mergedState contém os dados locais + quaisquer dados que outros computadores enviaram
-      const mergedState = await supabaseService.saveState(state);
+      // 2. Tenta sincronizar com a nuvem
+      // Agora o supabaseService.saveState apenas sobrescreve com a versão local mais recente
+      const savedState = await supabaseService.saveState(state);
       
-      if (mergedState) {
-        await dbService.save(mergedState);
-        return mergedState;
+      if (savedState) {
+        // Atualiza o banco local com a confirmação do que foi para a nuvem
+        await dbService.save(savedState);
+        return savedState;
       }
       
       return state;
     } catch (error) {
       console.error("Erro ao salvar dados:", error);
-      return null;
+      // Se falhar a nuvem, o dado já está no IndexedDB (passo 1)
+      return state;
     }
   }
 };

@@ -1,6 +1,6 @@
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { AppState, Task, Person, ServiceCategory, Particularity } from '../types';
+import { AppState } from '../types';
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
@@ -28,19 +28,18 @@ export const supabaseService = {
     }
   },
 
+  /**
+   * Salva o estado atual no Supabase.
+   * Para evitar que itens excluídos retornem, nós substituímos o estado remoto
+   * pelo estado local atual. O merge de novos dados de outros usuários deve ser feito
+   * explicitamente via botão de Sincronizar (loadState).
+   */
   async saveState(localState: AppState) {
-    if (!supabase) return;
+    if (!supabase) return localState;
     
     try {
-      const { data: remoteData } = await supabase
-        .from('app_data')
-        .select('state')
-        .eq('id', 'current_state')
-        .maybeSingle();
-
-      const remoteState = remoteData?.state as AppState;
-      
-      let stateToSave = {
+      // Garantimos que a estrutura esteja correta antes de salvar
+      const stateToSave = {
         ...localState,
         tasks: localState.tasks || [],
         people: localState.people || [],
@@ -48,35 +47,21 @@ export const supabaseService = {
         serviceCategories: localState.serviceCategories || []
       };
 
-      if (remoteState) {
-        const mergeById = <T extends { id: string }>(local: T[], remote: T[]): T[] => {
-          const l = local || [];
-          const r = remote || [];
-          const map = new Map<string, T>();
-          r.forEach(item => map.set(item.id, item));
-          l.forEach(item => map.set(item.id, item));
-          return Array.from(map.values());
-        };
-
-        stateToSave = {
-          ...stateToSave,
-          tasks: mergeById(localState.tasks, remoteState.tasks),
-          people: mergeById(localState.people, remoteState.people),
-          particularities: mergeById(localState.particularities, remoteState.particularities),
-          serviceCategories: mergeById(localState.serviceCategories, remoteState.serviceCategories)
-        };
-      }
-
       const { error } = await supabase
         .from('app_data')
-        .upsert({ id: 'current_state', state: stateToSave });
+        .upsert({ 
+          id: 'current_state', 
+          state: stateToSave,
+          updated_at: new Date().toISOString()
+        });
 
       if (error) throw error;
       
       return stateToSave;
     } catch (e) {
-      console.error("Erro ao salvar/mergear no Supabase:", e);
-      throw e;
+      console.error("Erro ao salvar no Supabase:", e);
+      // Em caso de erro, retornamos o estado local para não travar a UI
+      return localState;
     }
   }
 };
