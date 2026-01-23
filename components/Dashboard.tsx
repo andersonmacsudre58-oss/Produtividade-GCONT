@@ -4,7 +4,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   PieChart, Pie, Cell, AreaChart, Area, LabelList
 } from 'recharts';
-import { AppState, Task, ServiceCategory } from '../types';
+import { AppState, Task, ServiceCategory, Particularity } from '../types';
 import { Icons, PRESET_COLORS } from '../constants';
 import { getProductivityInsights } from '../services/geminiService';
 
@@ -79,6 +79,14 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onRefresh }) => {
     });
   }, [state.tasks, startDate, endDate]);
 
+  const filteredParticularities = useMemo(() => {
+    return (state.particularities || []).filter(p => {
+      const inDate = (!startDate || p.date >= startDate) && (!endDate || p.date <= endDate);
+      const inPerson = selectedPeopleIds.length === 0 || selectedPeopleIds.includes(p.personId);
+      return inDate && inPerson;
+    }).sort((a, b) => b.date.localeCompare(a.date));
+  }, [state.particularities, startDate, endDate, selectedPeopleIds]);
+
   const tasksForDetailedCharts = useMemo(() => {
     return tasksByDate.filter(t => {
       return selectedPeopleIds.length === 0 || selectedPeopleIds.includes(t.personId);
@@ -124,12 +132,21 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onRefresh }) => {
     if (tasksForDetailedCharts.length === 0) return;
     setLoadingAi(true);
     try {
-      const insight = await getProductivityInsights(tasksForDetailedCharts, state.people, state.serviceCategories);
+      const insight = await getProductivityInsights(tasksForDetailedCharts, state.people, state.serviceCategories, state.particularities);
       setAiInsight(insight);
     } catch (e) {
       setAiInsight("Erro ao gerar análise inteligente.");
     } finally {
       setLoadingAi(false);
+    }
+  };
+
+  const getTypeColor = (t: Particularity['type']) => {
+    switch (t) {
+      case 'Saúde': return 'border-red-500 bg-red-50 dark:bg-red-900/10';
+      case 'Treinamento': return 'border-blue-500 bg-blue-50 dark:bg-blue-900/10';
+      case 'Administrativo': return 'border-amber-500 bg-amber-50 dark:bg-amber-900/10';
+      default: return 'border-slate-500 bg-slate-50 dark:bg-slate-900/10';
     }
   };
 
@@ -241,18 +258,50 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onRefresh }) => {
           </h4>
         </div>
         <div className="bg-white dark:bg-slate-900 p-5 md:p-7 rounded-[24px] md:rounded-[32px] shadow-sm border border-slate-200 dark:border-slate-800 border-l-[6px] border-l-blue-500 transition-colors">
-          <p className="text-[9px] md:text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Tipos de Serviço</p>
+          <p className="text-[9px] md:text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Particularidades</p>
           <h4 className="text-3xl md:text-4xl font-black text-blue-600 dark:text-blue-500 mt-1 md:mt-2">
-            {(activeTab === 'common' ? commonPieData : specialPieData).length} <span className="text-xs uppercase opacity-40">Ativos</span>
+            {filteredParticularities.length} <span className="text-xs uppercase opacity-40">Eventos</span>
           </h4>
         </div>
+      </div>
+
+      {/* SEÇÃO DE PARTICULARIDADES (CARDS SUSPENSOS) */}
+      <div className="bg-white dark:bg-slate-900 p-6 md:p-8 rounded-[32px] shadow-sm border border-slate-200 dark:border-slate-800">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 rounded-xl"><Icons.Note /></div>
+          <h3 className="text-lg font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight">Ocorrências e Particularidades do Período</h3>
+        </div>
+        
+        {filteredParticularities.length === 0 ? (
+          <div className="py-10 text-center border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-3xl text-slate-400 font-bold text-xs uppercase tracking-widest">
+            Nenhuma ocorrência registrada no período selecionado.
+          </div>
+        ) : (
+          <div className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar">
+            {filteredParticularities.map(p => {
+              const person = state.people.find(per => per.id === p.personId);
+              return (
+                <div 
+                  key={p.id} 
+                  className={`min-w-[280px] md:min-w-[320px] p-5 rounded-3xl border-l-4 shadow-sm transition-all hover:-translate-y-1 ${getTypeColor(p.type)}`}
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider">{p.date.split('-').reverse().join('/')}</span>
+                    <span className="text-[8px] font-black px-2 py-0.5 rounded bg-white dark:bg-slate-800 uppercase shadow-sm">{p.type}</span>
+                  </div>
+                  <p className="font-bold text-slate-800 dark:text-slate-100 text-sm mb-1">{person?.name || '???'}</p>
+                  <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-3 leading-relaxed italic">"{p.description}"</p>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* GRAFICOS CONDICIONAIS */}
       <div className="space-y-8">
         {activeTab === 'common' ? (
           <>
-            {/* Gráfico de Barras: Visível apenas em 'Comuns' */}
             <div className="bg-white dark:bg-slate-900 p-6 md:p-10 rounded-[32px] md:rounded-[48px] shadow-sm border border-slate-200 dark:border-slate-800 transition-colors">
               <div className="flex items-center justify-between mb-8">
                 <h3 className="text-xl md:text-2xl font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight">Performance por Analista</h3>
@@ -287,7 +336,6 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onRefresh }) => {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {/* Gráfico de Tendência: Visível apenas em 'Comuns' */}
               <div className="bg-white dark:bg-slate-900 p-6 md:p-10 rounded-[32px] shadow-sm border border-slate-200 dark:border-slate-800">
                 <h3 className="text-lg md:text-xl font-black text-slate-800 dark:text-slate-100 mb-6 uppercase tracking-tight">Tendência de Produção</h3>
                 <div className="chart-container-md h-[300px]">
@@ -307,7 +355,6 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onRefresh }) => {
                 </div>
               </div>
 
-              {/* Gráfico de Pizza: Lado a Lado em 'Comuns' */}
               <div className="bg-white dark:bg-slate-900 p-6 md:p-10 rounded-[32px] shadow-sm border border-slate-200 dark:border-slate-800">
                 <h3 className="text-lg md:text-xl font-black text-slate-800 dark:text-slate-100 mb-6 uppercase tracking-tight">Distribuição de Serviços</h3>
                 <div className="chart-container-md h-[300px]">
@@ -337,7 +384,6 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onRefresh }) => {
             </div>
           </>
         ) : (
-          /* Aba 'Licitação/Diária': SOMENTE GRÁFICO DE PIZZA EM DESTAQUE */
           <div className="bg-white dark:bg-slate-900 p-8 md:p-16 rounded-[48px] shadow-sm border border-slate-200 dark:border-slate-800 transition-all flex flex-col items-center">
             <h3 className="text-xl md:text-3xl font-black text-slate-800 dark:text-slate-100 mb-12 uppercase tracking-tight text-center">
               Distribuição de Serviços de Licitação e Diárias
@@ -375,11 +421,11 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onRefresh }) => {
           </div>
         )}
 
-        {/* Diagnóstico IA - Mantido ao final para insights gerais */}
+        {/* Diagnóstico IA */}
         <div className="bg-slate-900 dark:bg-slate-800 rounded-[32px] p-8 text-white relative overflow-hidden flex flex-col justify-center transition-all">
           <div className="absolute top-0 right-0 p-10 opacity-10"><Icons.Sparkles /></div>
           <h2 className="text-xl font-black uppercase tracking-widest mb-2">Diagnóstico IA</h2>
-          <p className="text-slate-400 text-sm mb-6">Análise inteligente baseada no contexto atual.</p>
+          <p className="text-slate-400 text-sm mb-6">Análise inteligente baseada no contexto atual (Produção + Particularidades).</p>
           {aiInsight ? (
             <div className="bg-white/5 p-5 rounded-2xl text-xs leading-relaxed max-h-[200px] overflow-y-auto custom-scrollbar">
               {aiInsight}

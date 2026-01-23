@@ -31,13 +31,18 @@ const DailyLog: React.FC<DailyLogProps> = ({ tasks, people, categories, onAddTas
   const [isSyncing, setIsSyncing] = useState(false);
   
   const [filterDate, setFilterDate] = useState(getLocalDateStr());
+  const [filterPersonId, setFilterPersonId] = useState('');
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
 
   const filteredTasks = useMemo(() => {
     return tasks
-      .filter(t => t.date === filterDate)
+      .filter(t => {
+        const matchesDate = t.date === filterDate;
+        const matchesPerson = filterPersonId === '' || t.personId === filterPersonId;
+        return matchesDate && matchesPerson;
+      })
       .sort((a, b) => b.id.localeCompare(a.id));
-  }, [tasks, filterDate]);
+  }, [tasks, filterDate, filterPersonId]);
 
   const handleRefresh = async () => {
     if (onRefresh) {
@@ -147,7 +152,7 @@ const DailyLog: React.FC<DailyLogProps> = ({ tasks, people, categories, onAddTas
       </div>
 
       <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden transition-colors">
-        <div className="p-8 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row justify-between items-center gap-4">
+        <div className="p-8 border-b border-slate-100 dark:border-slate-800 flex flex-col xl:flex-row justify-between items-center gap-4">
           <div className="flex items-center gap-3">
             <h3 className="text-xl font-extrabold text-slate-800 dark:text-slate-100 tracking-tight">Histórico de Lançamentos</h3>
             <button 
@@ -161,9 +166,24 @@ const DailyLog: React.FC<DailyLogProps> = ({ tasks, people, categories, onAddTas
               </div>
             </button>
           </div>
-          <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800 px-4 py-2 rounded-2xl border border-slate-100 dark:border-slate-700">
-            <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase">Dia:</span>
-            <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="bg-transparent text-sm font-bold text-slate-700 dark:text-slate-200 outline-none" />
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800 px-4 py-2 rounded-2xl border border-slate-100 dark:border-slate-700">
+              <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase">Colaborador:</span>
+              <select 
+                value={filterPersonId} 
+                onChange={(e) => setFilterPersonId(e.target.value)} 
+                className="bg-transparent text-sm font-bold text-slate-700 dark:text-slate-200 outline-none cursor-pointer"
+              >
+                <option value="" className="dark:bg-slate-900">Todos</option>
+                {people.map(p => (
+                  <option key={p.id} value={p.id} className="dark:bg-slate-900">{p.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800 px-4 py-2 rounded-2xl border border-slate-100 dark:border-slate-700">
+              <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase">Dia:</span>
+              <input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="bg-transparent text-sm font-bold text-slate-700 dark:text-slate-200 outline-none cursor-pointer" />
+            </div>
           </div>
         </div>
         <div className="overflow-x-auto">
@@ -186,7 +206,7 @@ const DailyLog: React.FC<DailyLogProps> = ({ tasks, people, categories, onAddTas
                       <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-full">
                         <Icons.Calendar />
                       </div>
-                      <p className="font-bold text-sm uppercase tracking-widest">Nenhum registro para este dia.</p>
+                      <p className="font-bold text-sm uppercase tracking-widest">Nenhum registro encontrado para este filtro.</p>
                     </div>
                   </td>
                 </tr>

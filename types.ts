@@ -23,9 +23,18 @@ export interface Task {
   assignedProcesses: number; // Qtd de Processos Atribuídos
 }
 
+export interface Particularity {
+  id: string;
+  personId: string;
+  date: string;
+  type: 'Saúde' | 'Treinamento' | 'Administrativo' | 'Outros';
+  description: string;
+}
+
 export interface AppState {
   people: Person[];
   tasks: Task[];
+  particularities: Particularity[];
   serviceCategories: ServiceCategory[];
   userRole: UserRole;
 }

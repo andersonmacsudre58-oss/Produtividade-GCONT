@@ -1,17 +1,18 @@
 
 import React, { useState, useEffect } from 'react';
-import { Person, Task, AppState, ServiceCategory, UserRole } from './types';
+import { Person, Task, AppState, ServiceCategory, UserRole, Particularity } from './types';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import PeopleManager from './components/PeopleManager';
 import DailyLog from './components/DailyLog';
 import ServiceManager from './components/ServiceManager';
+import ParticularityManager from './components/ParticularityManager';
 import Login from './components/Login';
 import { DEFAULT_CATEGORIES, Icons } from './constants';
 import { apiService } from './services/api';
 
 const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'people' | 'logs' | 'services'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'people' | 'logs' | 'services' | 'particularities'>('dashboard');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -23,6 +24,7 @@ const App: React.FC = () => {
   const [state, setState] = useState<AppState>({ 
     people: [], 
     tasks: [], 
+    particularities: [],
     serviceCategories: DEFAULT_CATEGORIES,
     userRole: 'master' 
   });
@@ -57,14 +59,8 @@ const App: React.FC = () => {
   }, []);
 
   const persistState = async (newState: AppState) => {
-    // Atualiza localmente primeiro para resposta instantânea
     setState(newState);
-    
-    // Tenta salvar e fazer o merge no servidor
     const mergedState = await apiService.saveState(newState);
-    
-    // Se o servidor retornou um estado mergeado (com dados de outros computadores),
-    // atualizamos o nosso estado local para ficar tudo igual.
     if (mergedState) {
       setState(mergedState);
     }
@@ -99,7 +95,8 @@ const App: React.FC = () => {
     persistState({
       ...state,
       people: state.people.filter(p => p.id !== id),
-      tasks: state.tasks.filter(t => t.personId !== id)
+      tasks: state.tasks.filter(t => t.personId !== id),
+      particularities: state.particularities.filter(p => p.personId !== id)
     });
   };
 
@@ -118,6 +115,17 @@ const App: React.FC = () => {
     persistState({
       ...state,
       tasks: state.tasks.filter(t => t.id !== id)
+    });
+  };
+
+  const addParticularity = (p: Particularity) => {
+    persistState({ ...state, particularities: [...state.particularities, p] });
+  };
+
+  const removeParticularity = (id: string) => {
+    persistState({
+      ...state,
+      particularities: state.particularities.filter(p => p.id !== id)
     });
   };
 
@@ -172,12 +180,14 @@ const App: React.FC = () => {
               {activeTab === 'dashboard' && 'Visão Geral'}
               {activeTab === 'people' && 'Gerenciar Equipe'}
               {activeTab === 'logs' && 'Registro Diário'}
+              {activeTab === 'particularities' && 'Particularidades'}
               {activeTab === 'services' && 'Tipos de Serviço'}
             </h1>
             <p className="text-slate-500 dark:text-slate-400 font-medium">
               {activeTab === 'dashboard' && 'Monitore a produtividade e o desempenho da equipe.'}
               {activeTab === 'people' && 'Adicione ou remova membros da sua equipe.'}
               {activeTab === 'logs' && 'Visualize e gerencie os serviços realizados diariamente.'}
+              {activeTab === 'particularities' && 'Registre ocorrências como consultas, cursos ou licenças.'}
               {activeTab === 'services' && 'Personalize as categorias e gerencie a base de dados.'}
             </p>
           </div>
@@ -217,6 +227,14 @@ const App: React.FC = () => {
             onRemoveTask={removeTask}
             userRole={state.userRole}
             onRefresh={loadData}
+          />
+        )}
+        {activeTab === 'particularities' && (
+          <ParticularityManager 
+            particularities={state.particularities}
+            people={state.people}
+            onAdd={addParticularity}
+            onRemove={removeParticularity}
           />
         )}
         {activeTab === 'services' && state.userRole === 'master' && (
