@@ -40,22 +40,30 @@ export const supabaseService = {
 
       const remoteState = remoteData?.state as AppState;
       
-      let stateToSave = localState;
+      let stateToSave = {
+        ...localState,
+        tasks: localState.tasks || [],
+        people: localState.people || [],
+        particularities: localState.particularities || [],
+        serviceCategories: localState.serviceCategories || []
+      };
 
       if (remoteState) {
         const mergeById = <T extends { id: string }>(local: T[], remote: T[]): T[] => {
+          const l = local || [];
+          const r = remote || [];
           const map = new Map<string, T>();
-          remote.forEach(item => map.set(item.id, item));
-          local.forEach(item => map.set(item.id, item));
+          r.forEach(item => map.set(item.id, item));
+          l.forEach(item => map.set(item.id, item));
           return Array.from(map.values());
         };
 
         stateToSave = {
-          ...localState,
-          tasks: mergeById(localState.tasks || [], remoteState.tasks || []),
-          people: mergeById(localState.people || [], remoteState.people || []),
-          particularities: mergeById(localState.particularities || [], remoteState.particularities || []),
-          serviceCategories: mergeById(localState.serviceCategories || [], remoteState.serviceCategories || [])
+          ...stateToSave,
+          tasks: mergeById(localState.tasks, remoteState.tasks),
+          people: mergeById(localState.people, remoteState.people),
+          particularities: mergeById(localState.particularities, remoteState.particularities),
+          serviceCategories: mergeById(localState.serviceCategories, remoteState.serviceCategories)
         };
       }
 

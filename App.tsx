@@ -33,7 +33,17 @@ const App: React.FC = () => {
     setIsSyncing(true);
     try {
       const savedState = await apiService.loadState();
-      if (savedState) setState(savedState);
+      if (savedState) {
+        // Garante que campos novos existam mesmo em dados antigos
+        setState({
+          ...state,
+          ...savedState,
+          particularities: savedState.particularities || [],
+          tasks: savedState.tasks || [],
+          people: savedState.people || [],
+          serviceCategories: savedState.serviceCategories || DEFAULT_CATEGORIES
+        });
+      }
     } catch (error) {
       console.error("Erro no carregamento:", error);
     } finally {
@@ -62,7 +72,10 @@ const App: React.FC = () => {
     setState(newState);
     const mergedState = await apiService.saveState(newState);
     if (mergedState) {
-      setState(mergedState);
+      setState({
+        ...mergedState,
+        particularities: mergedState.particularities || []
+      });
     }
   };
 
@@ -87,59 +100,62 @@ const App: React.FC = () => {
 
   const addPerson = (person: Person) => {
     if (state.userRole !== 'master') return;
-    persistState({ ...state, people: [...state.people, person] });
+    persistState({ ...state, people: [...(state.people || []), person] });
   };
 
   const removePerson = (id: string) => {
     if (state.userRole !== 'master') return;
     persistState({
       ...state,
-      people: state.people.filter(p => p.id !== id),
-      tasks: state.tasks.filter(t => t.personId !== id),
-      particularities: state.particularities.filter(p => p.personId !== id)
+      people: (state.people || []).filter(p => p.id !== id),
+      tasks: (state.tasks || []).filter(t => t.personId !== id),
+      particularities: (state.particularities || []).filter(p => p.personId !== id)
     });
   };
 
   const addTask = (task: Task) => {
-    persistState({ ...state, tasks: [...state.tasks, task] });
+    persistState({ ...state, tasks: [...(state.tasks || []), task] });
   };
 
   const editTask = (updatedTask: Task) => {
     persistState({
       ...state,
-      tasks: state.tasks.map(t => t.id === updatedTask.id ? updatedTask : t)
+      tasks: (state.tasks || []).map(t => t.id === updatedTask.id ? updatedTask : t)
     });
   };
 
   const removeTask = (id: string) => {
     persistState({
       ...state,
-      tasks: state.tasks.filter(t => t.id !== id)
+      tasks: (state.tasks || []).filter(t => t.id !== id)
     });
   };
 
   const addParticularity = (p: Particularity) => {
-    persistState({ ...state, particularities: [...state.particularities, p] });
+    persistState({ 
+      ...state, 
+      particularities: [...(state.particularities || []), p] 
+    });
   };
 
   const removeParticularity = (id: string) => {
     persistState({
       ...state,
-      particularities: state.particularities.filter(p => p.id !== id)
+      particularities: (state.particularities || []).filter(p => p.id !== id)
     });
   };
 
   const addServiceCategory = (cat: ServiceCategory) => {
     if (state.userRole !== 'master') return;
-    persistState({ ...state, serviceCategories: [...state.serviceCategories, cat] });
+    persistState({ ...state, serviceCategories: [...(state.serviceCategories || []), cat] });
   };
 
   const removeServiceCategory = (id: string) => {
     if (state.userRole !== 'master') return;
     persistState({
       ...state,
-      serviceCategories: state.serviceCategories.filter(c => c.id !== id),
-      tasks: state.tasks.filter(t => t.serviceCategoryId !== id)
+      serviceCategories: (state.serviceCategories || []).filter(c => c.id !== id),
+      tasks: (state.tasks || []).filter(t => t.serviceCategoryId !== id)
     });
   };
 
@@ -231,8 +247,8 @@ const App: React.FC = () => {
         )}
         {activeTab === 'particularities' && (
           <ParticularityManager 
-            particularities={state.particularities}
-            people={state.people}
+            particularities={state.particularities || []}
+            people={state.people || []}
             onAdd={addParticularity}
             onRemove={removeParticularity}
           />
