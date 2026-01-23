@@ -23,6 +23,7 @@ export interface Task {
   assignedProcesses: number;
 }
 
+// Added missing Particularity interface for occurrence tracking
 export interface Particularity {
   id: string;
   personId: string;
@@ -34,8 +35,8 @@ export interface Particularity {
 export interface AppState {
   people: Person[];
   tasks: Task[];
-  particularities: Particularity[];
   serviceCategories: ServiceCategory[];
+  // Added particularities to the global state
+  particularities: Particularity[];
   userRole: UserRole;
-  updatedAt: number; // Timestamp da última alteração
 }
