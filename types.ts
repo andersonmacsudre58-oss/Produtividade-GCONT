@@ -17,10 +17,10 @@ export interface Task {
   id: string;
   personId: string;
   serviceCategoryId: string; 
-  invoiceQuantity: number; // Qtd de Notas Fiscais
-  date: string; // ISO date string YYYY-MM-DD
-  processQuantity: number; // Qtd de Processos (antigo quantity)
-  assignedProcesses: number; // Qtd de Processos Atribuídos
+  invoiceQuantity: number;
+  date: string;
+  processQuantity: number;
+  assignedProcesses: number;
 }
 
 export interface Particularity {

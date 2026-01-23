@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Person, Task, AppState, ServiceCategory, UserRole, Particularity } from './types';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
@@ -10,6 +10,7 @@ import ParticularityManager from './components/ParticularityManager';
 import Login from './components/Login';
 import { DEFAULT_CATEGORIES, Icons } from './constants';
 import { apiService } from './services/api';
+import { supabaseService } from './services/supabase';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'people' | 'logs' | 'services' | 'particularities'>('dashboard');
@@ -29,58 +30,66 @@ const App: React.FC = () => {
     userRole: 'master' 
   });
 
-  const loadData = async () => {
-    setIsSyncing(true);
+  // Função robusta de carregamento
+  const loadData = useCallback(async (showLoading = false) => {
+    if (showLoading) setIsSyncing(true);
     try {
       const savedState = await apiService.loadState();
       if (savedState) {
-        setState({
-          ...state,
+        setState(prev => ({
+          ...prev,
           ...savedState,
-          particularities: savedState.particularities || [],
-          tasks: savedState.tasks || [],
-          people: savedState.people || [],
-          serviceCategories: savedState.serviceCategories || DEFAULT_CATEGORIES
-        });
+          userRole: prev.userRole // Preserva o role da sessão atual
+        }));
       }
     } catch (error) {
-      console.error("Erro no carregamento:", error);
+      console.error("Erro ao carregar dados:", error);
     } finally {
-      setTimeout(() => setIsSyncing(false), 600);
+      if (showLoading) setTimeout(() => setIsSyncing(false), 600);
     }
-  };
-
-  useEffect(() => {
-    if (theme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-    localStorage.setItem('app-theme', theme);
-  }, [theme]);
-
-  useEffect(() => {
-    async function init() {
-      await loadData();
-      setTimeout(() => setIsLoading(false), 800);
-    }
-    init();
   }, []);
 
+  // Persistência com debounce implícito (pela lógica de eventos do React)
   const persistState = async (newState: AppState) => {
-    // Atualiza o estado da UI imediatamente para feedback instantâneo
+    // Atualização otimista da UI
     setState(newState);
     
-    // Sincroniza em background
     try {
-      const syncedState = await apiService.saveState(newState);
-      if (syncedState) {
-        setState(syncedState);
-      }
+      await apiService.saveState(newState);
     } catch (e) {
-      console.error("Falha na sincronização:", e);
+      console.error("Erro na persistência remota:", e);
     }
   };
+
+  // Efeito Inicial e Real-time
+  useEffect(() => {
+    if (isLoggedIn) {
+      loadData(true).then(() => setIsLoading(false));
+
+      // Inscreve para atualizações de outros usuários
+      const unsubscribe = supabaseService.subscribeToChanges((remoteState) => {
+        // Só atualizamos se o dado remoto for diferente (evita loops)
+        setState(prev => {
+          if (JSON.stringify(prev.tasks) !== JSON.stringify(remoteState.tasks) ||
+              JSON.stringify(prev.people) !== JSON.stringify(remoteState.people)) {
+            return { ...prev, ...remoteState };
+          }
+          return prev;
+        });
+      });
+
+      return () => unsubscribe();
+    } else {
+      setIsLoading(false);
+    }
+  }, [isLoggedIn, loadData]);
+
+  // Gerenciamento de Tema
+  useEffect(() => {
+    if (theme === 'dark') document.documentElement.classList.add('dark');
+    else document.documentElement.classList.remove('dark');
+    localStorage.setItem('app-theme', theme);
+  }, [theme]);
 
   const handleLogin = (role: UserRole) => {
     setState(prev => ({ ...prev, userRole: role }));
@@ -92,93 +101,72 @@ const App: React.FC = () => {
     setActiveTab('dashboard');
   };
 
-  const setUserRole = (role: UserRole) => {
-    persistState({ ...state, userRole: role });
-    if (role === 'basic' && (activeTab === 'people' || activeTab === 'services')) {
-      setActiveTab('dashboard');
-    }
-  };
-
   const toggleTheme = () => setTheme(prev => prev === 'light' ? 'dark' : 'light');
 
+  // Actions de Estado (Todas chamam persistState)
   const addPerson = (person: Person) => {
-    if (state.userRole !== 'master') return;
-    persistState({ ...state, people: [...(state.people || []), person] });
+    const newState = { ...state, people: [...state.people, person] };
+    persistState(newState);
   };
 
   const removePerson = (id: string) => {
-    if (state.userRole !== 'master') return;
-    persistState({
+    const newState = {
       ...state,
-      people: (state.people || []).filter(p => p.id !== id),
-      tasks: (state.tasks || []).filter(t => t.personId !== id),
-      particularities: (state.particularities || []).filter(p => p.personId !== id)
-    });
+      people: state.people.filter(p => p.id !== id),
+      tasks: state.tasks.filter(t => t.personId !== id),
+      particularities: state.particularities.filter(p => p.personId !== id)
+    };
+    persistState(newState);
   };
 
   const addTask = (task: Task) => {
-    persistState({ ...state, tasks: [...(state.tasks || []), task] });
+    persistState({ ...state, tasks: [...state.tasks, task] });
   };
 
   const editTask = (updatedTask: Task) => {
     persistState({
       ...state,
-      tasks: (state.tasks || []).map(t => t.id === updatedTask.id ? updatedTask : t)
+      tasks: state.tasks.map(t => t.id === updatedTask.id ? updatedTask : t)
     });
   };
 
   const removeTask = (id: string) => {
-    persistState({
-      ...state,
-      tasks: (state.tasks || []).filter(t => t.id !== id)
-    });
+    persistState({ ...state, tasks: state.tasks.filter(t => t.id !== id) });
   };
 
   const addParticularity = (p: Particularity) => {
-    persistState({ 
-      ...state, 
-      particularities: [...(state.particularities || []), p] 
-    });
+    persistState({ ...state, particularities: [...state.particularities, p] });
   };
 
   const removeParticularity = (id: string) => {
     persistState({
       ...state,
-      particularities: (state.particularities || []).filter(p => p.id !== id)
+      particularities: state.particularities.filter(p => p.id !== id)
     });
   };
 
   const addServiceCategory = (cat: ServiceCategory) => {
-    if (state.userRole !== 'master') return;
-    persistState({ ...state, serviceCategories: [...(state.serviceCategories || []), cat] });
+    persistState({ ...state, serviceCategories: [...state.serviceCategories, cat] });
   };
 
   const removeServiceCategory = (id: string) => {
-    if (state.userRole !== 'master') return;
     persistState({
       ...state,
-      serviceCategories: (state.serviceCategories || []).filter(c => c.id !== id),
-      tasks: (state.tasks || []).filter(t => t.serviceCategoryId !== id)
+      serviceCategories: state.serviceCategories.filter(c => c.id !== id),
+      tasks: state.tasks.filter(t => t.serviceCategoryId !== id)
     });
   };
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center transition-colors">
-        <div className="relative">
-          <div className="w-20 h-20 border-4 border-blue-100 dark:border-slate-800 border-t-blue-600 rounded-full animate-spin"></div>
-          <div className="absolute inset-0 flex items-center justify-center">
-             <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
-          </div>
-        </div>
-        <p className="mt-6 font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest text-xs animate-pulse">Iniciando Prod360...</p>
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center">
+        <div className="w-16 h-16 border-4 border-blue-600/20 border-t-blue-600 rounded-full animate-spin"></div>
+        <p className="mt-4 font-black text-[10px] text-slate-400 uppercase tracking-widest">Carregando Fluxo...</p>
       </div>
     );
   }
 
-  if (!isLoggedIn) {
-    return <Login onLogin={handleLogin} />;
-  }
+  if (!isLoggedIn) return <Login onLogin={handleLogin} />;
 
   return (
     <div className="flex min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors">
@@ -186,7 +174,7 @@ const App: React.FC = () => {
         activeTab={activeTab} 
         setActiveTab={setActiveTab} 
         userRole={state.userRole}
-        onRoleChange={setUserRole}
+        onRoleChange={(role) => persistState({...state, userRole: role})}
         onLogout={handleLogout}
         theme={theme}
         toggleTheme={toggleTheme}
@@ -195,47 +183,24 @@ const App: React.FC = () => {
       <main className="flex-1 p-6 md:p-10 overflow-auto">
         <header className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-slate-800 dark:text-slate-100 mb-1">
-              {activeTab === 'dashboard' && 'Visão Geral'}
-              {activeTab === 'people' && 'Gerenciar Equipe'}
-              {activeTab === 'logs' && 'Registro Diário'}
-              {activeTab === 'particularities' && 'Particularidades'}
-              {activeTab === 'services' && 'Tipos de Serviço'}
-            </h1>
-            <p className="text-slate-500 dark:text-slate-400 font-medium">
-              {activeTab === 'dashboard' && 'Monitore a produtividade e o desempenho da equipe.'}
-              {activeTab === 'people' && 'Adicione ou remova membros da sua equipe.'}
-              {activeTab === 'logs' && 'Visualize e gerencie os serviços realizados diariamente.'}
-              {activeTab === 'particularities' && 'Registre ocorrências como consultas, cursos ou licenças.'}
-              {activeTab === 'services' && 'Personalize as categorias e gerencie a base de dados.'}
-            </p>
+            <h1 className="text-3xl font-bold text-slate-800 dark:text-slate-100 mb-1 capitalize">{activeTab}</h1>
+            <p className="text-sm text-slate-500">Gestão de produtividade em tempo real.</p>
           </div>
           
           <div className="flex items-center gap-3">
-            <button 
-              onClick={loadData}
-              disabled={isSyncing}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-sm transition-all active:scale-95 ${
-                isSyncing ? 'bg-slate-200 dark:bg-slate-800 text-slate-400' : 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 border border-blue-50 dark:border-slate-700 hover:bg-blue-50 dark:hover:bg-slate-700'
-              }`}
-            >
-              <div className={isSyncing ? 'animate-spin' : ''}>
-                <Icons.Refresh />
-              </div>
-              {isSyncing ? 'Sincronizando...' : 'Sincronizar Dados'}
-            </button>
-            <div className={`px-4 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-sm ${
-              state.userRole === 'master' ? 'bg-indigo-600 text-white' : 'bg-emerald-600 text-white'
-            }`}>
-              {state.userRole === 'master' ? 'Acesso Master' : 'Acesso Básico'}
+            {isSyncing && (
+               <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 text-[10px] font-black rounded-full animate-pulse">
+                 <Icons.Refresh /> SINCRONIZANDO
+               </div>
+            )}
+            <div className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest ${state.userRole === 'master' ? 'bg-indigo-600 text-white' : 'bg-emerald-600 text-white'}`}>
+              {state.userRole}
             </div>
           </div>
         </header>
 
-        {activeTab === 'dashboard' && <Dashboard state={state} onRefresh={loadData} />}
-        {activeTab === 'people' && state.userRole === 'master' && (
-          <PeopleManager people={state.people} onAdd={addPerson} onRemove={removePerson} />
-        )}
+        {activeTab === 'dashboard' && <Dashboard state={state} onRefresh={() => loadData(true)} />}
+        {activeTab === 'people' && <PeopleManager people={state.people} onAdd={addPerson} onRemove={removePerson} />}
         {activeTab === 'logs' && (
           <DailyLog 
             tasks={state.tasks} 
@@ -245,18 +210,18 @@ const App: React.FC = () => {
             onEditTask={editTask}
             onRemoveTask={removeTask}
             userRole={state.userRole}
-            onRefresh={loadData}
+            onRefresh={() => loadData(true)}
           />
         )}
         {activeTab === 'particularities' && (
           <ParticularityManager 
-            particularities={state.particularities || []}
-            people={state.people || []}
+            particularities={state.particularities}
+            people={state.people}
             onAdd={addParticularity}
             onRemove={removeParticularity}
           />
         )}
-        {activeTab === 'services' && state.userRole === 'master' && (
+        {activeTab === 'services' && (
           <ServiceManager 
             categories={state.serviceCategories} 
             onAdd={addServiceCategory} 
@@ -264,19 +229,6 @@ const App: React.FC = () => {
             state={state}
             onImport={(imported) => persistState(imported)}
           />
-        )}
-
-        {(activeTab === 'people' || activeTab === 'services') && state.userRole === 'basic' && (
-          <div className="bg-white dark:bg-slate-900 p-12 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 text-center">
-            <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-2">Acesso Restrito</h2>
-            <p className="text-slate-500 dark:text-slate-400">Perfil operacional sem permissões administrativas.</p>
-            <button 
-              onClick={() => setActiveTab('dashboard')}
-              className="mt-8 bg-slate-900 dark:bg-blue-600 text-white px-8 py-3 rounded-2xl font-bold hover:bg-black dark:hover:bg-blue-700 transition-all"
-            >
-              Retornar ao Painel
-            </button>
-          </div>
         )}
       </main>
     </div>

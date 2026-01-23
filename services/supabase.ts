@@ -28,17 +28,10 @@ export const supabaseService = {
     }
   },
 
-  /**
-   * Salva o estado atual no Supabase.
-   * Para evitar que itens excluídos retornem, nós substituímos o estado remoto
-   * pelo estado local atual. O merge de novos dados de outros usuários deve ser feito
-   * explicitamente via botão de Sincronizar (loadState).
-   */
   async saveState(localState: AppState) {
     if (!supabase) return localState;
     
     try {
-      // Garantimos que a estrutura esteja correta antes de salvar
       const stateToSave = {
         ...localState,
         tasks: localState.tasks || [],
@@ -56,12 +49,39 @@ export const supabaseService = {
         });
 
       if (error) throw error;
-      
       return stateToSave;
     } catch (e) {
       console.error("Erro ao salvar no Supabase:", e);
-      // Em caso de erro, retornamos o estado local para não travar a UI
       return localState;
     }
+  },
+
+  /**
+   * Assina mudanças em tempo real na tabela de dados.
+   */
+  subscribeToChanges(callback: (newState: AppState) => void) {
+    if (!supabase) return () => {};
+
+    const channel = supabase
+      .channel('schema-db-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'app_data',
+          filter: 'id=eq.current_state'
+        },
+        (payload) => {
+          if (payload.new && payload.new.state) {
+            callback(payload.new.state as AppState);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }
 };
