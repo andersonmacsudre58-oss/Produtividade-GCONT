@@ -288,7 +288,19 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onRefresh }) => {
                          paddingAngle={8} 
                          dataKey="value" 
                          stroke="none"
-                         label={({ name, value }) => `${name}: ${value}`}
+                         label={({ name, value, cx, x, y }) => (
+                           <text 
+                             x={x} 
+                             y={y} 
+                             fill="#64748b" 
+                             textAnchor={x > cx ? 'start' : 'end'} 
+                             dominantBaseline="central" 
+                             fontSize={8} 
+                             fontWeight={800}
+                           >
+                             {`${name}: ${value}`}
+                           </text>
+                         )}
                        >
                          {pieData.map((e, i) => <Cell key={`p-${i}`} fill={PRESET_COLORS[i % PRESET_COLORS.length]} />)}
                        </Pie>
@@ -319,7 +331,19 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onRefresh }) => {
                       paddingAngle={15} 
                       dataKey="value" 
                       stroke="none" 
-                      label={({ name, value, percent }) => `${name}: ${value} (${(percent * 100).toFixed(0)}%)`}
+                      label={({ name, value, percent, cx, x, y }) => (
+                        <text 
+                          x={x} 
+                          y={y} 
+                          fill="#64748b" 
+                          textAnchor={x > cx ? 'start' : 'end'} 
+                          dominantBaseline="central" 
+                          fontSize={10} 
+                          fontWeight={900}
+                        >
+                          {`${name}: ${value} (${(percent * 100).toFixed(0)}%)`}
+                        </text>
+                      )}
                     >
                       {pieData.map((entry, index) => (
                         <Cell key={`ld-${index}`} fill={entry.name === 'Diária' ? '#10b981' : '#6366f1'} />
