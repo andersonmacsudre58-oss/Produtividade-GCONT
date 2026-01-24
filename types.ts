@@ -1,5 +1,5 @@
 
-export type UserRole = 'ANDERSON' | 'basic';
+export type UserRole = 'master' | 'basic';
 
 export interface ServiceCategory {
   id: string;

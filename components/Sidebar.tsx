@@ -75,13 +75,13 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, userRole, on
         <div className="bg-slate-50 dark:bg-slate-800/50 rounded-[24px] p-5 border border-slate-100 dark:border-slate-800">
           <div className="flex items-center gap-3 mb-4">
             <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold ${
-              userRole === 'ANDERSON' ? 'bg-indigo-600' : 'bg-emerald-600'
+              userRole === 'master' ? 'bg-indigo-600' : 'bg-emerald-600'
             }`}>
-              {userRole === 'ANDERSON' ? 'A' : '1'}
+              {userRole === 'master' ? 'M' : '1'}
             </div>
             <div className="overflow-hidden">
-              <p className="text-sm font-bold text-slate-800 dark:text-slate-100 truncate">{userRole === 'ANDERSON' ? 'Anderson' : 'Usuário 1'}</p>
-              <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">{userRole === 'ANDERSON' ? 'ANDERSON' : 'Básico'}</p>
+              <p className="text-sm font-bold text-slate-800 dark:text-slate-100 truncate">{userRole === 'master' ? 'Master' : 'Usuário 1'}</p>
+              <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">{userRole === 'master' ? 'MASTER' : 'Básico'}</p>
             </div>
           </div>
           

@@ -16,9 +16,14 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
     e.preventDefault();
     setError('');
 
-    // Credenciais ANDERSON
+    // Credenciais MASTER
     if (username.toUpperCase() === 'ANDERSON' && password === '1') {
-      onLogin('ANDERSON');
+      onLogin('master');
+      return;
+    }
+    // Suporte para o nome 'MASTER' também
+    if (username.toUpperCase() === 'MASTER' && password === '1') {
+      onLogin('master');
       return;
     }
 
@@ -94,7 +99,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
           <div className="mt-8 pt-6 border-t border-slate-50 dark:border-slate-800">
             <div className="flex justify-between items-center text-xs text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest">
-              <span>Nível ANDERSON</span>
+              <span>Nível MASTER</span>
               <span className="text-slate-300 dark:text-slate-800">|</span>
               <span>Nível Básico</span>
             </div>
