@@ -134,7 +134,25 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onRefresh }) => {
             <button onClick={() => {setActiveSubTab('licitacao-diaria'); setSelectedAnalystId(null);}} className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeSubTab === 'licitacao-diaria' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}>Licitação/Diária</button>
           </div>
         </div>
+        
         <div className="flex flex-wrap items-center gap-4">
+          {/* Filtro de Colaborador */}
+          <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800 px-4 py-2 rounded-2xl border border-slate-100 dark:border-slate-700">
+            <div className="flex flex-col">
+              <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Colaborador</span>
+              <select 
+                value={selectedAnalystId || ''} 
+                onChange={(e) => setSelectedAnalystId(e.target.value || null)}
+                className="bg-transparent text-[11px] font-bold outline-none dark:text-white cursor-pointer"
+              >
+                <option value="" className="dark:bg-slate-900">Todos os Analistas</option>
+                {state.people.map(p => (
+                  <option key={p.id} value={p.id} className="dark:bg-slate-900">{p.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
           <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl">
             {['hoje', 'semanal', 'mensal'].map(p => (
               <button key={p} onClick={() => setActivePreset(p as PeriodPreset)} className={`px-4 py-2 rounded-xl text-[10px] font-black transition-all ${activePreset === p ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-400'}`}>{p.toUpperCase()}</button>
@@ -221,7 +239,7 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onRefresh }) => {
                   <Icons.People /> Desempenho por Analista
                 </h3>
                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">
-                  {selectedAnalystId ? `Focando em: ${state.people.find(p => p.id === selectedAnalystId)?.name}` : 'Clique em uma barra para detalhar o mix'}
+                  {selectedAnalystId ? `Focando em: ${state.people.find(p => p.id === selectedAnalystId)?.name}` : 'Clique em uma barra ou use o filtro no topo'}
                 </p>
               </div>
               {selectedAnalystId && (
@@ -303,7 +321,7 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onRefresh }) => {
                              fill="#64748b" 
                              textAnchor={x > cx ? 'start' : 'end'} 
                              dominantBaseline="central" 
-                             fontSize={7} 
+                             fontSize={12} 
                              fontWeight={800}
                            >
                              {`${name}: ${value}`}
@@ -346,7 +364,7 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onRefresh }) => {
                           fill="#64748b" 
                           textAnchor={x > cx ? 'start' : 'end'} 
                           dominantBaseline="central" 
-                          fontSize={8} 
+                          fontSize={14} 
                           fontWeight={900}
                         >
                           {`${name}: ${value} (${(percent * 100).toFixed(0)}%)`}
