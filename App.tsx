@@ -17,12 +17,11 @@ const App: React.FC = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
-  const [lastUpdated, setLastUpdated] = useState<string | null>(null);
+  const [lastSync, setLastSync] = useState<string | null>(null);
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     try {
-      const saved = localStorage.getItem('app-theme');
-      return (saved as 'light' | 'dark') || 'light';
-    } catch (e) { return 'light'; }
+      return (localStorage.getItem('app-theme') as 'light' | 'dark') || 'light';
+    } catch { return 'light'; }
   });
   
   const [state, setState] = useState<AppState>({ 
@@ -36,21 +35,11 @@ const App: React.FC = () => {
   const loadData = useCallback(async () => {
     setIsSyncing(true);
     try {
-      const savedState = await apiService.loadState();
-      if (savedState) {
-        setState(prev => ({
-          ...savedState,
-          userRole: prev.userRole,
-          particularities: savedState.particularities || [],
-          tasks: savedState.tasks || [],
-          people: savedState.people || [],
-          serviceCategories: savedState.serviceCategories || DEFAULT_CATEGORIES
-        }));
-        const now = new Date();
-        setLastUpdated(now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }));
+      const data = await apiService.loadState();
+      if (data) {
+        setState(prev => ({ ...data, userRole: prev.userRole }));
+        setLastSync(new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }));
       }
-    } catch (error) {
-      console.warn("Falha ao carregar dados remotos, operando localmente.");
     } finally {
       setIsSyncing(false);
       setIsLoading(false);
@@ -59,19 +48,11 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (!isLoggedIn) return;
-    
-    // Inscrição em tempo real: Se outro computador mudar algo no Supabase, 
-    // este computador atualiza o estado imediatamente.
-    const unsubscribe = supabaseService.subscribeToChanges((newState) => {
-      setState(prev => ({
-        ...newState,
-        userRole: prev.userRole
-      }));
-      const now = new Date();
-      setLastUpdated(now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }));
+    const unsub = supabaseService.subscribeToChanges((newState) => {
+      setState(prev => ({ ...newState, userRole: prev.userRole }));
+      setLastSync(new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }));
     });
-    
-    return () => unsubscribe();
+    return unsub;
   }, [isLoggedIn]);
 
   useEffect(() => {
@@ -80,54 +61,34 @@ const App: React.FC = () => {
     localStorage.setItem('app-theme', theme);
   }, [theme]);
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+  useEffect(() => { loadData(); }, [loadData]);
 
-  const persistState = async (newState: AppState) => {
+  const persist = async (newState: AppState) => {
     setState(newState);
-    try {
-      await apiService.saveState(newState);
-      const now = new Date();
-      setLastUpdated(now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }));
-    } catch (e) {
-      // Falha silenciosa de rede
-    }
+    await apiService.saveState(newState);
+    setLastSync(new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }));
   };
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center">
-        <div className="relative">
-          <div className="w-16 h-16 border-4 border-blue-100 dark:border-slate-800 border-t-blue-600 rounded-full animate-spin"></div>
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-2 h-2 bg-blue-600 rounded-full animate-ping"></div>
-          </div>
-        </div>
-        <p className="mt-6 font-bold text-slate-400 uppercase tracking-widest text-[10px] animate-pulse">Carregando Banco de Dados...</p>
-      </div>
-    );
-  }
+  if (isLoading) return (
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center">
+      <div className="w-12 h-12 border-4 border-blue-600/20 border-t-blue-600 rounded-full animate-spin"></div>
+    </div>
+  );
 
-  if (!isLoggedIn) {
-    return <Login onLogin={(role) => { setState(p => ({...p, userRole: role})); setIsLoggedIn(true); }} />;
-  }
+  if (!isLoggedIn) return <Login onLogin={(role) => { setState(p => ({...p, userRole: role})); setIsLoggedIn(true); }} />;
 
   return (
-    <div className="flex min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors">
+    <div className="flex min-h-screen bg-slate-50 dark:bg-slate-950">
       <Sidebar 
-        activeTab={activeTab} 
-        setActiveTab={setActiveTab} 
-        userRole={state.userRole}
-        onRoleChange={(role) => persistState({...state, userRole: role})}
+        activeTab={activeTab} setActiveTab={setActiveTab} 
+        userRole={state.userRole} onRoleChange={(role) => persist({...state, userRole: role})}
         onLogout={() => { setIsLoggedIn(false); setActiveTab('dashboard'); }}
-        theme={theme}
-        toggleTheme={() => setTheme(p => p === 'light' ? 'dark' : 'light')}
+        theme={theme} toggleTheme={() => setTheme(p => p === 'light' ? 'dark' : 'light')}
       />
       
       <main className="flex-1 p-6 md:p-10 overflow-auto">
-        <header className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex flex-col">
+        <header className="mb-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
             <h1 className="text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tighter uppercase">
               {activeTab === 'dashboard' && 'Dashboard'}
               {activeTab === 'people' && 'Equipe'}
@@ -135,60 +96,49 @@ const App: React.FC = () => {
               {activeTab === 'particularities' && 'Ocorrências'}
               {activeTab === 'services' && 'Serviços'}
             </h1>
-            {lastUpdated && (
-              <span className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-1">
-                Sincronizado às {lastUpdated}
-              </span>
-            )}
+            {lastSync && <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Sincronizado: {lastSync}</p>}
           </div>
           
           <div className="flex items-center gap-3">
             <button 
-              onClick={loadData}
-              disabled={isSyncing}
-              className={`flex items-center gap-2 px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg transition-all active:scale-95 ${
-                isSyncing 
-                  ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 border border-blue-100 dark:border-blue-800' 
-                  : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-100 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'
-              }`}
+              onClick={loadData} disabled={isSyncing}
+              className="flex items-center gap-2 px-6 py-3 bg-white dark:bg-slate-800 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-sm border border-slate-100 dark:border-slate-700 hover:bg-slate-50 transition-all active:scale-95 disabled:opacity-50"
             >
-              <div className={isSyncing ? 'animate-spin' : ''}>
-                <Icons.Refresh />
-              </div>
-              {isSyncing ? 'Buscando Dados...' : 'Atualizar Agora'}
+              <div className={isSyncing ? 'animate-spin' : ''}><Icons.Refresh /></div>
+              {isSyncing ? 'Atualizando...' : 'Sincronizar Manual'}
             </button>
-            <div className={`px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-sm border border-transparent ${state.userRole === 'master' ? 'bg-indigo-600 text-white' : 'bg-emerald-600 text-white'}`}>
-              {state.userRole === 'master' ? 'Acesso Master' : 'Acesso Básico'}
+            <div className={`px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest text-white ${state.userRole === 'master' ? 'bg-indigo-600' : 'bg-emerald-600'}`}>
+              {state.userRole === 'master' ? 'Master' : 'Básico'}
             </div>
           </div>
         </header>
 
         {activeTab === 'dashboard' && <Dashboard state={state} onRefresh={loadData} />}
         {activeTab === 'people' && state.userRole === 'master' && (
-          <PeopleManager people={state.people} onAdd={(p) => persistState({...state, people: [...state.people, p]})} onRemove={(id) => persistState({...state, people: state.people.filter(x => x.id !== id)})} />
+          <PeopleManager people={state.people} onAdd={(p) => persist({...state, people: [...state.people, p]})} onRemove={(id) => persist({...state, people: state.people.filter(x => x.id !== id)})} />
         )}
         {activeTab === 'logs' && (
           <DailyLog 
             tasks={state.tasks} people={state.people} categories={state.serviceCategories}
-            onAddTask={(t) => persistState({...state, tasks: [...state.tasks, t]})} 
-            onEditTask={(t) => persistState({...state, tasks: state.tasks.map(x => x.id === t.id ? t : x)})}
-            onRemoveTask={(id) => persistState({...state, tasks: state.tasks.filter(x => x.id !== id)})}
+            onAddTask={(t) => persist({...state, tasks: [...state.tasks, t]})} 
+            onEditTask={(t) => persist({...state, tasks: state.tasks.map(x => x.id === t.id ? t : x)})}
+            onRemoveTask={(id) => persist({...state, tasks: state.tasks.filter(x => x.id !== id)})}
             userRole={state.userRole} onRefresh={loadData}
           />
         )}
         {activeTab === 'particularities' && (
           <ParticularityManager 
             particularities={state.particularities} people={state.people}
-            onAdd={(p) => persistState({...state, particularities: [...state.particularities, p]})}
-            onRemove={(id) => persistState({...state, particularities: state.particularities.filter(x => x.id !== id)})}
+            onAdd={(p) => persist({...state, particularities: [...state.particularities, p]})}
+            onRemove={(id) => persist({...state, particularities: state.particularities.filter(x => x.id !== id)})}
           />
         )}
         {activeTab === 'services' && state.userRole === 'master' && (
           <ServiceManager 
             categories={state.serviceCategories} 
-            onAdd={(c) => persistState({...state, serviceCategories: [...state.serviceCategories, c]})} 
-            onRemove={(id) => persistState({...state, serviceCategories: state.serviceCategories.filter(x => x.id !== id)})} 
-            state={state} onImport={(s) => persistState(s)}
+            onAdd={(c) => persist({...state, serviceCategories: [...state.serviceCategories, c]})} 
+            onRemove={(id) => persist({...state, serviceCategories: state.serviceCategories.filter(x => x.id !== id)})} 
+            state={state} onImport={(s) => persist(s)}
           />
         )}
       </main>
