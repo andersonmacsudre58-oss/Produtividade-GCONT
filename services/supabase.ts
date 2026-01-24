@@ -5,6 +5,11 @@ import { AppState } from '../types';
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
 
+// Log para debug (ajuda o desenvolvedor a ver se as chaves foram injetadas)
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.warn("⚠️ Supabase: Chaves de configuração não encontradas. O sistema funcionará apenas em modo LOCAL (Offline).");
+}
+
 export const supabase: SupabaseClient | null = (supabaseUrl && supabaseAnonKey) 
   ? createClient(supabaseUrl, supabaseAnonKey) 
   : null;
@@ -19,72 +24,59 @@ export const supabaseService = {
         .eq('id', 'current_state')
         .maybeSingle();
 
-      if (error) throw error;
+      if (error) {
+        console.error("❌ Erro ao buscar dados no Supabase:", error.message);
+        return null;
+      }
+      
       return data?.state as AppState || null;
     } catch (e) {
-      console.error("Erro ao carregar do Supabase:", e);
+      console.error("❌ Falha crítica de conexão com Supabase:", e);
       return null;
     }
   },
 
-  async saveState(localState: AppState) {
+  async saveState(localState: AppState): Promise<AppState> {
     if (!supabase) return localState;
     
     try {
-      // 1. Busca dados atuais da nuvem para merge preventivo
-      const { data: remoteData } = await supabase
+      // Validação de sanidade: Não salva se o estado parecer corrompido ou vazio demais
+      // (Ex: se não houver pessoas E não houver tarefas, mas o estado anterior tinha dados)
+      // Isso previne que um erro de inicialização apague o banco de dados.
+      
+      const { data: existing } = await supabase
         .from('app_data')
         .select('state')
         .eq('id', 'current_state')
         .maybeSingle();
 
-      const remoteState = remoteData?.state as AppState;
-      
-      let stateToSave = localState;
+      const remoteState = existing?.state as AppState;
 
-      if (remoteState) {
-        // Função de merge de segurança: 
-        // Consolida o que está na nuvem com o que foi feito localmente sem apagar nada
-        const mergeLists = <T extends { id: string }>(local: T[] = [], remote: T[] = []): T[] => {
-          const mergedMap = new Map<string, T>();
-          // Adiciona remotos primeiro (preserva o que já existe na nuvem)
-          remote.forEach(item => mergedMap.set(item.id, item));
-          // Sobrescreve/Adiciona locais (o que o usuário acabou de fazer)
-          local.forEach(item => mergedMap.set(item.id, item));
-          return Array.from(mergedMap.values());
-        };
-
-        stateToSave = {
-          ...localState,
-          people: mergeLists(localState.people, remoteState.people),
-          tasks: mergeLists(localState.tasks, remoteState.tasks),
-          particularities: mergeLists(localState.particularities, remoteState.particularities),
-          serviceCategories: mergeLists(localState.serviceCategories, remoteState.serviceCategories)
-        };
-      }
-
-      // Segurança Crítica: Não salva se as listas essenciais estiverem vazias e a remota tiver dados
-      // Isso evita que um erro de carregamento local apague o banco de dados.
+      // Se temos dados remotos e o local está suspeitosamente vazio, abortamos o overwrite
       if (remoteState && 
           localState.people.length === 0 && 
-          remoteState.people.length > 0) {
-          console.warn("⚠️ Sincronização bloqueada: Tentativa de apagar dados remotos com estado local vazio.");
+          remoteState.people.length > 5) {
+          console.error("🛑 Bloqueio de Sincronização: Tentativa de sobrescrever dados remotos com uma lista local vazia.");
           return remoteState;
       }
 
-      // 2. Salva o estado consolidado
       const { error } = await supabase
         .from('app_data')
         .upsert({ 
           id: 'current_state', 
-          state: stateToSave,
+          state: localState,
           updated_at: new Date().toISOString()
-        });
+        }, { onConflict: 'id' });
 
-      if (error) throw error;
-      return stateToSave;
+      if (error) {
+        console.error("❌ Erro ao fazer Upsert no Supabase:", error.message);
+        throw error;
+      }
+
+      console.log("✅ Sincronização com Supabase concluída com sucesso.");
+      return localState;
     } catch (e) {
-      console.error("Erro ao salvar no Supabase:", e);
+      console.error("❌ Erro ao salvar no Supabase:", e);
       return localState;
     }
   }
