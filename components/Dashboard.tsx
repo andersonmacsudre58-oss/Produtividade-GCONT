@@ -117,12 +117,13 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onRefresh }) => {
 
   return (
     <div className="space-y-6 pb-20 fade-in">
+      {/* Header com Filtros */}
       <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md p-6 rounded-[32px] shadow-sm border border-slate-200/60 dark:border-slate-800 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
         <div className="space-y-1">
           <h3 className="text-xl font-black text-slate-800 dark:text-slate-100 uppercase tracking-tighter">Controle Gerencial</h3>
           <div className="flex gap-2">
-            <button onClick={() => {setActiveSubTab('pagamento'); setSelectedAnalystId(null);}} className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeSubTab === 'pagamento' ? 'bg-blue-600 text-white shadow-lg' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}>Pagamentos</button>
-            <button onClick={() => {setActiveSubTab('licitacao-diaria'); setSelectedAnalystId(null);}} className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeSubTab === 'licitacao-diaria' ? 'bg-indigo-600 text-white shadow-lg' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}>Licitação/Diária</button>
+            <button onClick={() => {setActiveSubTab('pagamento'); setSelectedAnalystId(null);}} className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeSubTab === 'pagamento' ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}>Pagamentos</button>
+            <button onClick={() => {setActiveSubTab('licitacao-diaria'); setSelectedAnalystId(null);}} className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeSubTab === 'licitacao-diaria' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}>Licitação/Diária</button>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-4">
@@ -145,30 +146,32 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onRefresh }) => {
         </div>
       </div>
 
+      {/* Cartões Numéricos */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white dark:bg-slate-900 p-5 rounded-[28px] border border-slate-100 dark:border-slate-800 shadow-sm flex items-center justify-between group hover:shadow-md transition-all">
+        <div className="bg-white dark:bg-slate-900 p-5 rounded-[28px] border border-slate-100 dark:border-slate-800 shadow-sm flex items-center justify-between group">
           <div>
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Processos Adicionados</p>
             <h4 className="text-3xl font-black text-blue-600 dark:text-blue-500">{stats.atribuidos}</h4>
           </div>
-          <div className="w-12 h-12 bg-blue-50 dark:bg-blue-900/20 rounded-2xl flex items-center justify-center text-blue-600 transition-transform"><Icons.Task /></div>
+          <div className="w-12 h-12 bg-blue-50 dark:bg-blue-900/20 rounded-2xl flex items-center justify-center text-blue-600"><Icons.Task /></div>
         </div>
-        <div className="bg-white dark:bg-slate-900 p-5 rounded-[28px] border border-slate-100 dark:border-slate-800 shadow-sm flex items-center justify-between group hover:shadow-md transition-all">
+        <div className="bg-white dark:bg-slate-900 p-5 rounded-[28px] border border-slate-100 dark:border-slate-800 shadow-sm flex items-center justify-between group">
           <div>
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Processos Realizados</p>
             <h4 className="text-3xl font-black text-amber-600 dark:text-amber-500">{stats.realizados}</h4>
           </div>
-          <div className="w-12 h-12 bg-amber-50 dark:bg-amber-900/20 rounded-2xl flex items-center justify-center text-amber-600 transition-transform"><Icons.Calendar /></div>
+          <div className="w-12 h-12 bg-amber-50 dark:bg-amber-900/20 rounded-2xl flex items-center justify-center text-amber-600"><Icons.Calendar /></div>
         </div>
-        <div className="bg-white dark:bg-slate-900 p-5 rounded-[28px] border border-slate-100 dark:border-slate-800 shadow-sm flex items-center justify-between group hover:shadow-md transition-all">
+        <div className="bg-white dark:bg-slate-900 p-5 rounded-[28px] border border-slate-100 dark:border-slate-800 shadow-sm flex items-center justify-between group">
           <div>
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Notas Fiscais</p>
             <h4 className="text-3xl font-black text-emerald-600 dark:text-emerald-500">{stats.notas}</h4>
           </div>
-          <div className="w-12 h-12 bg-emerald-50 dark:bg-emerald-900/20 rounded-2xl flex items-center justify-center text-emerald-600 transition-transform"><Icons.Note /></div>
+          <div className="w-12 h-12 bg-emerald-50 dark:bg-emerald-900/20 rounded-2xl flex items-center justify-center text-emerald-600"><Icons.Note /></div>
         </div>
       </div>
 
+      {/* Feed de Ocorrências */}
       <div className="bg-white dark:bg-slate-900 p-6 rounded-[32px] border border-slate-200/50 dark:border-slate-800 shadow-sm">
         <div className="flex items-center justify-between mb-4">
           <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
@@ -188,7 +191,7 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onRefresh }) => {
                             p.type === 'Administrativo' ? 'border-amber-400 bg-amber-50 text-amber-900 dark:bg-amber-950 dark:border-amber-800 dark:text-amber-200' :
                             'border-slate-400 bg-slate-50 text-slate-900 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-200';
               return (
-                <div key={p.id} className={`flex-shrink-0 min-w-[280px] p-4 rounded-2xl border ${colors} shadow-sm`}>
+                <div key={p.id} className={`flex-shrink-0 min-w-[280px] p-4 rounded-2xl border ${colors} shadow-sm transition-all`}>
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-[10px] font-black uppercase truncate max-w-[150px] tracking-tight">{person?.name}</span>
                     <span className="text-[9px] font-bold opacity-80">{p.date.split('-').reverse().slice(0,2).join('/')}</span>
@@ -245,6 +248,7 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onRefresh }) => {
               ) : <div className="h-full flex items-center justify-center text-slate-300 font-black uppercase text-xs italic tracking-widest">Sem lançamentos registrados</div>}
             </div>
           </div>
+          
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <div className="bg-white dark:bg-slate-900 p-8 rounded-[40px] shadow-sm border border-slate-100 dark:border-slate-800">
                <h3 className="text-lg font-black text-slate-800 dark:text-slate-100 uppercase tracking-tighter mb-8 flex items-center gap-2">
@@ -261,11 +265,14 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onRefresh }) => {
                      <XAxis dataKey="date" fontSize={9} axisLine={false} tickLine={false} tickFormatter={s => s.split('-').reverse().slice(0,2).join('/')} stroke="#94a3b8" />
                      <YAxis fontSize={9} axisLine={false} tickLine={false} stroke="#94a3b8" />
                      <Tooltip contentStyle={{borderRadius: '16px'}} />
-                     <Area type="monotone" dataKey="realizados" stroke="#3b82f6" strokeWidth={4} fillOpacity={1} fill="url(#colorRealizados)" />
+                     <Area type="monotone" dataKey="realizados" stroke="#3b82f6" strokeWidth={4} fillOpacity={1} fill="url(#colorRealizados)">
+                        <LabelList dataKey="realizados" position="top" style={{ fontSize: 11, fontWeight: 900, fill: '#3b82f6' }} offset={10} />
+                     </Area>
                    </AreaChart>
                  </ResponsiveContainer>
                </div>
             </div>
+            
             <div className="bg-white dark:bg-slate-900 p-8 rounded-[40px] shadow-sm border border-slate-100 dark:border-slate-800">
                <h3 className="text-lg font-black text-slate-800 dark:text-slate-100 uppercase tracking-tighter mb-8 flex items-center gap-2">
                  <Icons.Task /> Serviços
@@ -274,11 +281,19 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onRefresh }) => {
                  {pieData.length > 0 ? (
                    <ResponsiveContainer width="100%" height="100%">
                      <PieChart>
-                       <Pie data={pieData} innerRadius={60} outerRadius={90} paddingAngle={8} dataKey="value" stroke="none">
+                       <Pie 
+                         data={pieData} 
+                         innerRadius={60} 
+                         outerRadius={90} 
+                         paddingAngle={8} 
+                         dataKey="value" 
+                         stroke="none"
+                         label={({ name, value }) => `${name}: ${value}`}
+                       >
                          {pieData.map((e, i) => <Cell key={`p-${i}`} fill={PRESET_COLORS[i % PRESET_COLORS.length]} />)}
                        </Pie>
                        <Tooltip contentStyle={{borderRadius: '16px'}} />
-                       <Legend iconType="circle" wrapperStyle={{fontSize: '11px', fontWeight: 800}} />
+                       <Legend iconType="circle" wrapperStyle={{fontSize: '11px', fontWeight: 800, paddingTop: '10px'}} />
                      </PieChart>
                    </ResponsiveContainer>
                  ) : <div className="h-full flex items-center justify-center text-slate-200 font-black uppercase text-[10px] italic">Sem mix de serviço</div>}
@@ -296,7 +311,16 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onRefresh }) => {
               {pieData.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <Pie data={pieData} cx="50%" cy="50%" outerRadius={210} innerRadius={110} paddingAngle={15} dataKey="value" stroke="none" label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}>
+                    <Pie 
+                      data={pieData} 
+                      cx="50%" cy="50%" 
+                      outerRadius={210} 
+                      innerRadius={110} 
+                      paddingAngle={15} 
+                      dataKey="value" 
+                      stroke="none" 
+                      label={({ name, value, percent }) => `${name}: ${value} (${(percent * 100).toFixed(0)}%)`}
+                    >
                       {pieData.map((entry, index) => (
                         <Cell key={`ld-${index}`} fill={entry.name === 'Diária' ? '#10b981' : '#6366f1'} />
                       ))}
@@ -314,6 +338,7 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onRefresh }) => {
         </div>
       )}
 
+      {/* Diagnóstico IA */}
       <div className="bg-slate-950 rounded-[40px] p-10 text-white relative overflow-hidden group shadow-2xl shadow-blue-900/20">
         <div className="absolute -top-24 -right-24 w-80 h-80 bg-blue-600/10 rounded-full blur-[100px] group-hover:bg-blue-600/20 transition-all duration-1000"></div>
         <div className="relative z-10">
