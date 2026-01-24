@@ -3,26 +3,39 @@ import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import cors from 'cors';
+import fs from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-// O Render injeta automaticamente a variável PORT
 const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 
-// Servir os arquivos compilados pelo Vite
-app.use(express.static(path.join(__dirname, 'dist')));
+const distPath = path.join(__dirname, 'dist');
 
-// Fallback para Single Page Application (garante que F5 funcione em qualquer página)
+// Log para ajudar a debugar no Render caso a build falhe
+if (!fs.existsSync(distPath)) {
+  console.error("❌ ERRO: Pasta 'dist' não encontrada. Verifique se o 'Build Command' (npm run build) funcionou.");
+} else {
+  console.log("✅ Pasta 'dist' detectada com sucesso.");
+}
+
+app.use(express.static(distPath));
+
+// Fallback para SPA (React Router / rotas internas)
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+  const indexPath = path.join(distPath, 'index.html');
+  if (fs.existsSync(indexPath)) {
+    res.sendFile(indexPath);
+  } else {
+    res.status(404).send("Erro: Arquivo index.html não encontrado na pasta dist.");
+  }
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 Servidor rodando na porta ${PORT}`);
-  console.log(`📁 Servindo frontend da pasta: ${path.join(__dirname, 'dist')}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Web Service Ativo na porta ${PORT}`);
+  console.log(`📡 URL base: http://0.0.0.0:${PORT}`);
 });
