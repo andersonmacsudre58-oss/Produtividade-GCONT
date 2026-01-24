@@ -10,6 +10,7 @@ import ParticularityManager from './components/ParticularityManager';
 import Login from './components/Login';
 import { DEFAULT_CATEGORIES, Icons } from './constants';
 import { apiService } from './services/api';
+import { supabaseService } from './services/supabase';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'people' | 'logs' | 'services' | 'particularities'>('dashboard');
@@ -31,7 +32,6 @@ const App: React.FC = () => {
 
   const loadData = async () => {
     setIsSyncing(true);
-    // IMPORTANTE: Preserva o role atual para não cair para 'basic' durante a sync
     const currentLocalRole = state.userRole;
     
     try {
@@ -39,7 +39,7 @@ const App: React.FC = () => {
       if (savedState) {
         setState({
           ...savedState,
-          userRole: currentLocalRole, // Garante que MASTER continue MASTER
+          userRole: currentLocalRole,
           particularities: savedState.particularities || [],
           tasks: savedState.tasks || [],
           people: savedState.people || [],
@@ -52,6 +52,23 @@ const App: React.FC = () => {
       setTimeout(() => setIsSyncing(false), 600);
     }
   };
+
+  // Inscrição em Tempo Real para sincronizar entre múltiplos computadores
+  useEffect(() => {
+    if (!isLoggedIn) return;
+
+    const unsubscribe = supabaseService.subscribeToChanges((newState) => {
+      const currentRole = state.userRole;
+      setState(prev => ({
+        ...newState,
+        userRole: currentRole // Preserva o nível de acesso do usuário atual
+      }));
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [isLoggedIn, state.userRole]);
 
   useEffect(() => {
     if (theme === 'dark') {
@@ -72,15 +89,13 @@ const App: React.FC = () => {
 
   const persistState = async (newState: AppState) => {
     const currentLocalRole = state.userRole;
-    // Atualiza a UI imediatamente mantendo o role
     const stateWithRole = { ...newState, userRole: currentLocalRole };
+    
+    // Atualiza UI local primeiro para resposta rápida
     setState(stateWithRole);
     
     try {
-      const syncedState = await apiService.saveState(stateWithRole);
-      if (syncedState) {
-        setState({ ...syncedState, userRole: currentLocalRole });
-      }
+      await apiService.saveState(stateWithRole);
     } catch (e) {
       console.error("Falha na sincronização:", e);
     }
@@ -172,7 +187,7 @@ const App: React.FC = () => {
              <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
           </div>
         </div>
-        <p className="mt-6 font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest text-xs animate-pulse">Iniciando Gerência Contábil...</p>
+        <p className="mt-6 font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest text-xs animate-pulse">Sincronizando com a nuvem...</p>
       </div>
     );
   }
@@ -216,7 +231,7 @@ const App: React.FC = () => {
               <div className={isSyncing ? 'animate-spin' : ''}>
                 <Icons.Refresh />
               </div>
-              {isSyncing ? 'Sincronizando...' : 'Sincronizar Dados'}
+              {isSyncing ? 'Sincronizando...' : 'Forçar Atualização'}
             </button>
             <div className={`px-4 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-sm ${
               state.userRole === 'master' ? 'bg-indigo-600 text-white' : 'bg-emerald-600 text-white'

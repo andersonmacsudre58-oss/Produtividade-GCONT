@@ -5,9 +5,8 @@ import { AppState } from '../types';
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
 
-// Log para debug (ajuda o desenvolvedor a ver se as chaves foram injetadas)
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn("⚠️ Supabase: Chaves de configuração não encontradas. O sistema funcionará apenas em modo LOCAL (Offline).");
+  console.warn("⚠️ Supabase: Chaves de configuração não encontradas. O sistema funcionará apenas em modo LOCAL.");
 }
 
 export const supabase: SupabaseClient | null = (supabaseUrl && supabaseAnonKey) 
@@ -40,26 +39,7 @@ export const supabaseService = {
     if (!supabase) return localState;
     
     try {
-      // Validação de sanidade: Não salva se o estado parecer corrompido ou vazio demais
-      // (Ex: se não houver pessoas E não houver tarefas, mas o estado anterior tinha dados)
-      // Isso previne que um erro de inicialização apague o banco de dados.
-      
-      const { data: existing } = await supabase
-        .from('app_data')
-        .select('state')
-        .eq('id', 'current_state')
-        .maybeSingle();
-
-      const remoteState = existing?.state as AppState;
-
-      // Se temos dados remotos e o local está suspeitosamente vazio, abortamos o overwrite
-      if (remoteState && 
-          localState.people.length === 0 && 
-          remoteState.people.length > 5) {
-          console.error("🛑 Bloqueio de Sincronização: Tentativa de sobrescrever dados remotos com uma lista local vazia.");
-          return remoteState;
-      }
-
+      // Pequena pausa para evitar colisões de escrita extremamente rápidas
       const { error } = await supabase
         .from('app_data')
         .upsert({ 
@@ -73,11 +53,34 @@ export const supabaseService = {
         throw error;
       }
 
-      console.log("✅ Sincronização com Supabase concluída com sucesso.");
+      console.log("✅ Sincronização com Supabase concluída.");
       return localState;
     } catch (e) {
       console.error("❌ Erro ao salvar no Supabase:", e);
       return localState;
     }
+  },
+
+  // Escuta mudanças em tempo real feitas por outros computadores
+  subscribeToChanges(onUpdate: (newState: AppState) => void) {
+    if (!supabase) return () => {};
+
+    const channel = supabase
+      .channel('app_changes')
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'app_data', filter: 'id=eq.current_state' },
+        (payload) => {
+          if (payload.new && (payload.new as any).state) {
+            console.log("🔄 Dados atualizados remotamente recebidos via Realtime");
+            onUpdate((payload.new as any).state as AppState);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }
 };
