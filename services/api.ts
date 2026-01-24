@@ -6,34 +6,33 @@ import { supabaseService } from "./supabase";
 export const apiService = {
   async loadState(): Promise<AppState | null> {
     try {
-      // 1. Tenta buscar da nuvem (fonte da verdade)
+      // Prioridade total para a nuvem
       const cloudData = await supabaseService.getState();
       
       if (cloudData) {
-        // Atualiza o cache local para uso offline futuro
         await dbService.save(cloudData);
         return cloudData;
       }
       
-      // 2. Se a nuvem estiver vazia ou offline, usa o local
+      // Se a nuvem retornar vazio (primeira vez), tenta o local
       return await dbService.load();
     } catch (error) {
-      console.error("Erro no carregamento híbrido:", error);
+      // Se der erro na nuvem (conexão/permissão), ainda tenta o local mas loga o erro
+      console.warn("⚠️ Usando cache local devido a erro na nuvem.");
       return await dbService.load();
     }
   },
 
   async saveState(state: AppState): Promise<AppState | null> {
-    try {
-      // 1. Salva localmente primeiro para persistência imediata
-      await dbService.save(state);
+    // Salva local para não perder o trabalho em caso de queda de internet
+    await dbService.save(state);
 
-      // 2. Sincroniza com a nuvem
-      const savedState = await supabaseService.saveState(state);
-      
-      return savedState || state;
+    try {
+      // Tenta sincronizar
+      await supabaseService.saveState(state);
+      return state;
     } catch (error) {
-      console.error("Erro ao salvar dados na API:", error);
+      console.error("⚠️ Salvo apenas localmente.");
       return state;
     }
   }

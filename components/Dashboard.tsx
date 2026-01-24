@@ -28,7 +28,28 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onRefresh }) => {
   const [selectedAnalystId, setSelectedAnalystId] = useState<string | null>(null);
   const [aiInsight, setAiInsight] = useState<string | null>(null);
   const [loadingAi, setLoadingAi] = useState(false);
-  const isCloudConnected = supabaseService.isConfigured();
+  const [cloudStatus, setCloudStatus] = useState<'checking' | 'ok' | 'error'>('checking');
+  const [cloudError, setCloudError] = useState<string | null>(null);
+
+  const configs = supabaseService.getConfigs();
+
+  useEffect(() => {
+    const checkConn = async () => {
+      if (!supabaseService.isConfigured()) {
+        setCloudStatus('error');
+        setCloudError('Chaves do Supabase não encontradas no build.');
+        return;
+      }
+      try {
+        await supabaseService.getState();
+        setCloudStatus('ok');
+      } catch (e: any) {
+        setCloudStatus('error');
+        setCloudError(e.message || 'Erro de conexão com o banco.');
+      }
+    };
+    checkConn();
+  }, []);
 
   useEffect(() => {
     const now = new Date();
@@ -119,14 +140,27 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onRefresh }) => {
 
   return (
     <div className="space-y-6 pb-20 fade-in">
-      {/* Header com Filtros e Status de Conexão */}
+      {/* Widget de Diagnóstico de Erro Global */}
+      {cloudStatus === 'error' && (
+        <div className="bg-rose-600 text-white p-4 rounded-2xl shadow-lg animate-shake flex items-center justify-between">
+           <div className="flex items-center gap-3">
+             <div className="bg-white/20 p-2 rounded-lg"><Icons.Trash /></div>
+             <div>
+                <p className="text-[10px] font-black uppercase tracking-widest opacity-80">Falha na Sincronização Global</p>
+                <p className="text-xs font-bold">{cloudError}</p>
+             </div>
+           </div>
+           <button onClick={() => window.location.reload()} className="px-4 py-2 bg-white text-rose-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-rose-50 transition-colors">Tentar Reconectar</button>
+        </div>
+      )}
+
       <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md p-6 rounded-[32px] shadow-sm border border-slate-200/60 dark:border-slate-800 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
         <div className="space-y-1">
           <div className="flex items-center gap-3">
              <h3 className="text-xl font-black text-slate-800 dark:text-slate-100 uppercase tracking-tighter">Controle Gerencial</h3>
-             <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest ${isCloudConnected ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400' : 'bg-rose-50 text-rose-600 dark:bg-rose-900/20 dark:text-rose-400'}`}>
-                <div className={`w-1.5 h-1.5 rounded-full ${isCloudConnected ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`}></div>
-                {isCloudConnected ? 'Nuvem Conectada' : 'Modo Local'}
+             <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest ${cloudStatus === 'ok' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400' : 'bg-rose-50 text-rose-600 dark:bg-rose-900/20 dark:text-rose-400'}`}>
+                <div className={`w-1.5 h-1.5 rounded-full ${cloudStatus === 'ok' ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`}></div>
+                {cloudStatus === 'ok' ? 'Nuvem Ativa' : cloudStatus === 'checking' ? 'Conectando...' : 'Offline'}
              </div>
           </div>
           <div className="flex gap-2 mt-2">
@@ -136,7 +170,6 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onRefresh }) => {
         </div>
         
         <div className="flex flex-wrap items-center gap-4">
-          {/* Filtro de Colaborador */}
           <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800 px-4 py-2 rounded-2xl border border-slate-100 dark:border-slate-700">
             <div className="flex flex-col">
               <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Colaborador</span>
@@ -172,7 +205,6 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onRefresh }) => {
         </div>
       </div>
 
-      {/* Cartões Numéricos */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white dark:bg-slate-900 p-5 rounded-[28px] border border-slate-100 dark:border-slate-800 shadow-sm flex items-center justify-between group">
           <div>
@@ -197,7 +229,6 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onRefresh }) => {
         </div>
       </div>
 
-      {/* Feed de Ocorrências */}
       <div className="bg-white dark:bg-slate-900 p-6 rounded-[32px] border border-slate-200/50 dark:border-slate-800 shadow-sm">
         <div className="flex items-center justify-between mb-4">
           <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
@@ -388,7 +419,6 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onRefresh }) => {
         </div>
       )}
 
-      {/* Diagnóstico IA */}
       <div className="bg-slate-950 rounded-[40px] p-10 text-white relative overflow-hidden group shadow-2xl shadow-blue-900/20">
         <div className="absolute -top-24 -right-24 w-80 h-80 bg-blue-600/10 rounded-full blur-[100px] group-hover:bg-blue-600/20 transition-all duration-1000"></div>
         <div className="relative z-10">

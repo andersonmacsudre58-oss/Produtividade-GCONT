@@ -2,27 +2,39 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { AppState } from '../types';
 
+// O Vite injeta estas variáveis durante o npm run build
 const supabaseUrl = process.env.SUPABASE_URL || '';
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || '';
 
-// Validação rigorosa das chaves
+// Diagnóstico inicial para o desenvolvedor (visível no F12)
+console.log("Supabase URL carregada:", supabaseUrl ? "Configurada ✅" : "Vazia ❌");
+console.log("Supabase Key carregada:", supabaseAnonKey ? "Configurada ✅" : "Vazia ❌");
+
 const isValidConfig = supabaseUrl.startsWith('http') && supabaseAnonKey.length > 10;
 
 export const supabase: SupabaseClient | null = isValidConfig 
   ? createClient(supabaseUrl, supabaseAnonKey) 
   : null;
 
-if (!supabase) {
-  console.error("❌ Supabase não configurado ou chaves inválidas. Verifique SUPABASE_URL e SUPABASE_ANON_KEY.");
-}
-
 export const supabaseService = {
   isConfigured(): boolean {
     return !!supabase;
   },
 
+  getConfigs() {
+    return {
+      hasUrl: !!supabaseUrl,
+      hasKey: !!supabaseAnonKey,
+      isValid: isValidConfig
+    };
+  },
+
   async getState(): Promise<AppState | null> {
-    if (!supabase) return null;
+    if (!supabase) {
+      console.warn("⚠️ Supabase não inicializado. Verifique as variáveis de ambiente no Render.");
+      return null;
+    }
+    
     try {
       const { data, error } = await supabase
         .from('app_data')
@@ -31,14 +43,20 @@ export const supabaseService = {
         .maybeSingle();
 
       if (error) {
-        console.error("❌ Erro ao buscar no Supabase:", error.message, error.details);
-        return null;
+        console.error(`❌ Erro Supabase (${error.code}):`, error.message);
+        if (error.code === '42P01') {
+          console.error("DICA: A tabela 'app_data' não existe no seu banco de dados Supabase.");
+        }
+        if (error.message.includes('policy')) {
+          console.error("DICA: Erro de permissão RLS. Execute o SQL de 'Acesso Público Total'.");
+        }
+        throw error;
       }
       
       return data?.state as AppState || null;
     } catch (e) {
-      console.error("❌ Falha crítica de conexão:", e);
-      return null;
+      console.error("❌ Falha crítica ao ler da nuvem:", e);
+      throw e;
     }
   },
 
@@ -46,7 +64,6 @@ export const supabaseService = {
     if (!supabase) return localState;
     
     try {
-      // Criamos um payload limpo (removemos campos temporários se houver)
       const payload = { 
         id: 'current_state', 
         state: localState,
@@ -58,42 +75,37 @@ export const supabaseService = {
         .upsert(payload, { onConflict: 'id' });
 
       if (error) {
-        console.error("❌ Erro ao salvar no Supabase:", error.message, error.details);
-        // Se der erro de "Entity not found", verifique se a tabela 'app_data' existe.
+        console.error("❌ Erro ao salvar dados na nuvem:", error.message);
         throw error;
       }
 
-      console.log("✅ Dados sincronizados com a nuvem.");
       return localState;
     } catch (e) {
-      console.error("❌ Exceção ao salvar:", e);
-      return localState;
+      console.error("❌ Falha crítica ao salvar na nuvem:", e);
+      throw e;
     }
   },
 
   subscribeToChanges(onUpdate: (newState: AppState) => void) {
     if (!supabase) return () => {};
 
-    console.log("📡 Iniciando escuta de mudanças em tempo real...");
-    
     const channel = supabase
-      .channel('app_sync_channel')
+      .channel('public_app_data_sync')
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'app_data', filter: 'id=eq.current_state' },
         (payload) => {
+          console.log("🔔 Sincronização em tempo real: Novos dados recebidos!");
           if (payload.new && (payload.new as any).state) {
-            console.log("🔄 Mudança detectada em outro dispositivo. Atualizando...");
             onUpdate((payload.new as any).state as AppState);
           }
         }
       )
       .subscribe((status) => {
-        console.log(`🔌 Status da conexão Realtime: ${status}`);
+        console.log("Status da conexão Realtime:", status);
       });
 
     return () => {
-      console.log("📴 Encerrando escuta de mudanças.");
       supabase.removeChannel(channel);
     };
   }
