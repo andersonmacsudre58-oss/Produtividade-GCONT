@@ -31,7 +31,7 @@ export const supabaseService = {
     if (!supabase) return localState;
     
     try {
-      // 1. Busca dados atuais da nuvem para merge
+      // 1. Busca dados atuais da nuvem para merge preventivo
       const { data: remoteData } = await supabase
         .from('app_data')
         .select('state')
@@ -43,23 +43,33 @@ export const supabaseService = {
       let stateToSave = localState;
 
       if (remoteState) {
-        // Função de merge para listas: Mantém itens novos de outros PCs e atualiza os existentes
-        const mergeLists = <T extends { id: string }>(local: T[], remote: T[]): T[] => {
+        // Função de merge de segurança: 
+        // Consolida o que está na nuvem com o que foi feito localmente sem apagar nada
+        const mergeLists = <T extends { id: string }>(local: T[] = [], remote: T[] = []): T[] => {
           const mergedMap = new Map<string, T>();
-          // Adiciona remotos primeiro
+          // Adiciona remotos primeiro (preserva o que já existe na nuvem)
           remote.forEach(item => mergedMap.set(item.id, item));
-          // Sobrescreve com locais (o que você acabou de fazer tem prioridade)
+          // Sobrescreve/Adiciona locais (o que o usuário acabou de fazer)
           local.forEach(item => mergedMap.set(item.id, item));
           return Array.from(mergedMap.values());
         };
 
         stateToSave = {
           ...localState,
-          people: mergeLists(localState.people || [], remoteState.people || []),
-          tasks: mergeLists(localState.tasks || [], remoteState.tasks || []),
-          particularities: mergeLists(localState.particularities || [], remoteState.particularities || []),
-          serviceCategories: mergeLists(localState.serviceCategories || [], remoteState.serviceCategories || [])
+          people: mergeLists(localState.people, remoteState.people),
+          tasks: mergeLists(localState.tasks, remoteState.tasks),
+          particularities: mergeLists(localState.particularities, remoteState.particularities),
+          serviceCategories: mergeLists(localState.serviceCategories, remoteState.serviceCategories)
         };
+      }
+
+      // Segurança Crítica: Não salva se as listas essenciais estiverem vazias e a remota tiver dados
+      // Isso evita que um erro de carregamento local apague o banco de dados.
+      if (remoteState && 
+          localState.people.length === 0 && 
+          remoteState.people.length > 0) {
+          console.warn("⚠️ Sincronização bloqueada: Tentativa de apagar dados remotos com estado local vazio.");
+          return remoteState;
       }
 
       // 2. Salva o estado consolidado
