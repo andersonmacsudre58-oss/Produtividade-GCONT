@@ -7,6 +7,7 @@ import {
 import { AppState, Task, ServiceCategory, Particularity } from '../types';
 import { Icons, PRESET_COLORS } from '../constants';
 import { getProductivityInsights } from '../services/geminiService';
+import { supabaseService } from '../services/supabase';
 
 interface DashboardProps { state: AppState; onRefresh?: () => Promise<void>; }
 
@@ -27,6 +28,7 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onRefresh }) => {
   const [selectedAnalystId, setSelectedAnalystId] = useState<string | null>(null);
   const [aiInsight, setAiInsight] = useState<string | null>(null);
   const [loadingAi, setLoadingAi] = useState(false);
+  const isCloudConnected = supabaseService.isConfigured();
 
   useEffect(() => {
     const now = new Date();
@@ -117,11 +119,17 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onRefresh }) => {
 
   return (
     <div className="space-y-6 pb-20 fade-in">
-      {/* Header com Filtros */}
+      {/* Header com Filtros e Status de Conexão */}
       <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md p-6 rounded-[32px] shadow-sm border border-slate-200/60 dark:border-slate-800 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
         <div className="space-y-1">
-          <h3 className="text-xl font-black text-slate-800 dark:text-slate-100 uppercase tracking-tighter">Controle Gerencial</h3>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-3">
+             <h3 className="text-xl font-black text-slate-800 dark:text-slate-100 uppercase tracking-tighter">Controle Gerencial</h3>
+             <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest ${isCloudConnected ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400' : 'bg-rose-50 text-rose-600 dark:bg-rose-900/20 dark:text-rose-400'}`}>
+                <div className={`w-1.5 h-1.5 rounded-full ${isCloudConnected ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`}></div>
+                {isCloudConnected ? 'Nuvem Conectada' : 'Modo Local'}
+             </div>
+          </div>
+          <div className="flex gap-2 mt-2">
             <button onClick={() => {setActiveSubTab('pagamento'); setSelectedAnalystId(null);}} className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeSubTab === 'pagamento' ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}>Pagamentos</button>
             <button onClick={() => {setActiveSubTab('licitacao-diaria'); setSelectedAnalystId(null);}} className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeSubTab === 'licitacao-diaria' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}>Licitação/Diária</button>
           </div>
@@ -295,7 +303,7 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onRefresh }) => {
                              fill="#64748b" 
                              textAnchor={x > cx ? 'start' : 'end'} 
                              dominantBaseline="central" 
-                             fontSize={8} 
+                             fontSize={7} 
                              fontWeight={800}
                            >
                              {`${name}: ${value}`}
@@ -338,7 +346,7 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onRefresh }) => {
                           fill="#64748b" 
                           textAnchor={x > cx ? 'start' : 'end'} 
                           dominantBaseline="central" 
-                          fontSize={10} 
+                          fontSize={8} 
                           fontWeight={900}
                         >
                           {`${name}: ${value} (${(percent * 100).toFixed(0)}%)`}
