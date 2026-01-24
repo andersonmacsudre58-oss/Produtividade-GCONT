@@ -7,7 +7,6 @@ import {
 import { AppState, Task, ServiceCategory, Particularity } from '../types';
 import { Icons, PRESET_COLORS } from '../constants';
 import { getProductivityInsights } from '../services/geminiService';
-import { supabaseService } from '../services/supabase';
 
 interface DashboardProps { state: AppState; onRefresh?: () => Promise<void>; }
 
@@ -28,28 +27,6 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onRefresh }) => {
   const [selectedAnalystId, setSelectedAnalystId] = useState<string | null>(null);
   const [aiInsight, setAiInsight] = useState<string | null>(null);
   const [loadingAi, setLoadingAi] = useState(false);
-  const [cloudStatus, setCloudStatus] = useState<'checking' | 'ok' | 'error'>('checking');
-  const [cloudError, setCloudError] = useState<string | null>(null);
-
-  const configs = supabaseService.getConfigs();
-
-  useEffect(() => {
-    const checkConn = async () => {
-      if (!supabaseService.isConfigured()) {
-        setCloudStatus('error');
-        setCloudError('Chaves do Supabase não encontradas no build.');
-        return;
-      }
-      try {
-        await supabaseService.getState();
-        setCloudStatus('ok');
-      } catch (e: any) {
-        setCloudStatus('error');
-        setCloudError(e.message || 'Erro de conexão com o banco.');
-      }
-    };
-    checkConn();
-  }, []);
 
   useEffect(() => {
     const now = new Date();
@@ -140,32 +117,13 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onRefresh }) => {
 
   return (
     <div className="space-y-6 pb-20 fade-in">
-      {/* Widget de Diagnóstico de Erro Global */}
-      {cloudStatus === 'error' && (
-        <div className="bg-rose-600 text-white p-4 rounded-2xl shadow-lg animate-shake flex items-center justify-between">
-           <div className="flex items-center gap-3">
-             <div className="bg-white/20 p-2 rounded-lg"><Icons.Trash /></div>
-             <div>
-                <p className="text-[10px] font-black uppercase tracking-widest opacity-80">Falha na Sincronização Global</p>
-                <p className="text-xs font-bold">{cloudError}</p>
-             </div>
-           </div>
-           <button onClick={() => window.location.reload()} className="px-4 py-2 bg-white text-rose-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-rose-50 transition-colors">Tentar Reconectar</button>
-        </div>
-      )}
-
+      {/* Header do Dashboard sem alertas de sincronização */}
       <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md p-6 rounded-[32px] shadow-sm border border-slate-200/60 dark:border-slate-800 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
         <div className="space-y-1">
-          <div className="flex items-center gap-3">
-             <h3 className="text-xl font-black text-slate-800 dark:text-slate-100 uppercase tracking-tighter">Controle Gerencial</h3>
-             <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest ${cloudStatus === 'ok' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400' : 'bg-rose-50 text-rose-600 dark:bg-rose-900/20 dark:text-rose-400'}`}>
-                <div className={`w-1.5 h-1.5 rounded-full ${cloudStatus === 'ok' ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`}></div>
-                {cloudStatus === 'ok' ? 'Nuvem Ativa' : cloudStatus === 'checking' ? 'Conectando...' : 'Offline'}
-             </div>
-          </div>
+          <h3 className="text-xl font-black text-slate-800 dark:text-slate-100 uppercase tracking-tighter">Controle Gerencial</h3>
           <div className="flex gap-2 mt-2">
-            <button onClick={() => {setActiveSubTab('pagamento'); setSelectedAnalystId(null);}} className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeSubTab === 'pagamento' ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}>Pagamentos</button>
-            <button onClick={() => {setActiveSubTab('licitacao-diaria'); setSelectedAnalystId(null);}} className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeSubTab === 'licitacao-diaria' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}>Licitação/Diária</button>
+            <button onClick={() => {setActiveSubTab('pagamento'); setSelectedAnalystId(null);}} className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeSubTab === 'pagamento' ? 'bg-blue-600 text-white shadow-lg' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}>Pagamentos</button>
+            <button onClick={() => {setActiveSubTab('licitacao-diaria'); setSelectedAnalystId(null);}} className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeSubTab === 'licitacao-diaria' ? 'bg-indigo-600 text-white shadow-lg' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}>Licitação/Diária</button>
           </div>
         </div>
         

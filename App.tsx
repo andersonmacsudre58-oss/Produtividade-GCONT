@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Person, Task, AppState, ServiceCategory, UserRole, Particularity } from './types';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
@@ -17,7 +17,7 @@ const App: React.FC = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
-  const [initError, setInitError] = useState<string | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<string | null>(null);
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     try {
       const saved = localStorage.getItem('app-theme');
@@ -33,40 +33,45 @@ const App: React.FC = () => {
     userRole: 'master' 
   });
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setIsSyncing(true);
     try {
       const savedState = await apiService.loadState();
       if (savedState) {
         setState(prev => ({
           ...savedState,
-          userRole: prev.userRole, // Mantém o role atual
+          userRole: prev.userRole,
           particularities: savedState.particularities || [],
           tasks: savedState.tasks || [],
           people: savedState.people || [],
           serviceCategories: savedState.serviceCategories || DEFAULT_CATEGORIES
         }));
+        const now = new Date();
+        setLastUpdated(now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }));
       }
     } catch (error) {
-      console.error("Erro ao carregar dados:", error);
+      console.warn("Falha ao carregar dados remotos, operando localmente.");
     } finally {
       setIsSyncing(false);
+      setIsLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     if (!isLoggedIn) return;
-    try {
-      const unsubscribe = supabaseService.subscribeToChanges((newState) => {
-        setState(prev => ({
-          ...newState,
-          userRole: prev.userRole
-        }));
-      });
-      return () => unsubscribe();
-    } catch (e) {
-      console.error("Erro ao assinar mudanças:", e);
-    }
+    
+    // Inscrição em tempo real: Se outro computador mudar algo no Supabase, 
+    // este computador atualiza o estado imediatamente.
+    const unsubscribe = supabaseService.subscribeToChanges((newState) => {
+      setState(prev => ({
+        ...newState,
+        userRole: prev.userRole
+      }));
+      const now = new Date();
+      setLastUpdated(now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }));
+    });
+    
+    return () => unsubscribe();
   }, [isLoggedIn]);
 
   useEffect(() => {
@@ -76,48 +81,30 @@ const App: React.FC = () => {
   }, [theme]);
 
   useEffect(() => {
-    async function init() {
-      try {
-        await loadData();
-      } catch (e: any) {
-        console.error("Erro crítico na inicialização:", e);
-        setInitError(e.message || "Erro desconhecido ao iniciar o app.");
-      } finally {
-        setIsLoading(false);
-      }
-    }
-    init();
-  }, []);
+    loadData();
+  }, [loadData]);
 
   const persistState = async (newState: AppState) => {
     setState(newState);
     try {
       await apiService.saveState(newState);
+      const now = new Date();
+      setLastUpdated(now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }));
     } catch (e) {
-      console.error("Erro de persistência:", e);
+      // Falha silenciosa de rede
     }
   };
-
-  if (initError) {
-    return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-6">
-        <div className="bg-white dark:bg-slate-900 p-10 rounded-[40px] shadow-2xl border border-rose-100 dark:border-rose-900/30 text-center max-w-md">
-           <div className="bg-rose-100 dark:bg-rose-900/30 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 text-rose-600">
-             <Icons.Trash />
-           </div>
-           <h2 className="text-2xl font-black text-slate-800 dark:text-white mb-4">Ops! Algo deu errado</h2>
-           <p className="text-slate-500 dark:text-slate-400 text-sm mb-8 font-medium">{initError}</p>
-           <button onClick={() => window.location.reload()} className="w-full bg-slate-900 dark:bg-blue-600 text-white py-4 rounded-2xl font-bold">Tentar Novamente</button>
-        </div>
-      </div>
-    );
-  }
 
   if (isLoading) {
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center">
-        <div className="w-20 h-20 border-4 border-blue-100 dark:border-slate-800 border-t-blue-600 rounded-full animate-spin"></div>
-        <p className="mt-6 font-bold text-slate-400 uppercase tracking-widest text-[10px] animate-pulse">Iniciando Sistema...</p>
+        <div className="relative">
+          <div className="w-16 h-16 border-4 border-blue-100 dark:border-slate-800 border-t-blue-600 rounded-full animate-spin"></div>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="w-2 h-2 bg-blue-600 rounded-full animate-ping"></div>
+          </div>
+        </div>
+        <p className="mt-6 font-bold text-slate-400 uppercase tracking-widest text-[10px] animate-pulse">Carregando Banco de Dados...</p>
       </div>
     );
   }
@@ -140,24 +127,37 @@ const App: React.FC = () => {
       
       <main className="flex-1 p-6 md:p-10 overflow-auto">
         <header className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <h1 className="text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tighter uppercase">
-            {activeTab === 'dashboard' && 'Dashboard'}
-            {activeTab === 'people' && 'Equipe'}
-            {activeTab === 'logs' && 'Registros'}
-            {activeTab === 'particularities' && 'Ocorrências'}
-            {activeTab === 'services' && 'Serviços'}
-          </h1>
+          <div className="flex flex-col">
+            <h1 className="text-3xl font-black text-slate-800 dark:text-slate-100 tracking-tighter uppercase">
+              {activeTab === 'dashboard' && 'Dashboard'}
+              {activeTab === 'people' && 'Equipe'}
+              {activeTab === 'logs' && 'Registros'}
+              {activeTab === 'particularities' && 'Ocorrências'}
+              {activeTab === 'services' && 'Serviços'}
+            </h1>
+            {lastUpdated && (
+              <span className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-1">
+                Sincronizado às {lastUpdated}
+              </span>
+            )}
+          </div>
           
           <div className="flex items-center gap-3">
             <button 
               onClick={loadData}
               disabled={isSyncing}
-              className="flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-slate-800 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-sm border border-slate-100 dark:border-slate-700 hover:bg-slate-50 transition-all disabled:opacity-50"
+              className={`flex items-center gap-2 px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg transition-all active:scale-95 ${
+                isSyncing 
+                  ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 border border-blue-100 dark:border-blue-800' 
+                  : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-100 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'
+              }`}
             >
-              <div className={isSyncing ? 'animate-spin' : ''}><Icons.Refresh /></div>
-              {isSyncing ? 'Sincronizando...' : 'Atualizar'}
+              <div className={isSyncing ? 'animate-spin' : ''}>
+                <Icons.Refresh />
+              </div>
+              {isSyncing ? 'Buscando Dados...' : 'Atualizar Agora'}
             </button>
-            <div className={`px-4 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-sm ${state.userRole === 'master' ? 'bg-indigo-600 text-white' : 'bg-emerald-600 text-white'}`}>
+            <div className={`px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-sm border border-transparent ${state.userRole === 'master' ? 'bg-indigo-600 text-white' : 'bg-emerald-600 text-white'}`}>
               {state.userRole === 'master' ? 'Acesso Master' : 'Acesso Básico'}
             </div>
           </div>
