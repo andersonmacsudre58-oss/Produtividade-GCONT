@@ -26,12 +26,13 @@ if (!fs.existsSync(distPath)) {
 app.use(express.static(distPath));
 
 // Fallback para SPA (React Router / rotas internas)
-app.get('*', (req, res) => {
+// No Express 5, o caractere '*' sozinho causa erro. Usamos '(.*)' para capturar tudo.
+app.get('(.*)', (req, res) => {
   const indexPath = path.join(distPath, 'index.html');
   if (fs.existsSync(indexPath)) {
     res.sendFile(indexPath);
   } else {
-    res.status(404).send("Erro: Arquivo index.html não encontrado na pasta dist.");
+    res.status(404).send("Erro: Arquivo index.html não encontrado na pasta dist. Verifique se o build foi executado corretamente.");
   }
 });
 
