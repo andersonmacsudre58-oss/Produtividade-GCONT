@@ -2,15 +2,21 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { AppState } from '../types';
 
-// O Vite injeta estas variáveis durante o npm run build
-const supabaseUrl = process.env.SUPABASE_URL || '';
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || '';
+// Função para obter variáveis de ambiente de forma segura no navegador
+const getSafeEnv = (key: string): string => {
+  try {
+    // Tenta acessar via process.env (injetado pelo Vite)
+    return (typeof process !== 'undefined' && process.env && process.env[key]) || '';
+  } catch (e) {
+    return '';
+  }
+};
 
-// Diagnóstico inicial para o desenvolvedor (visível no F12)
-console.log("Supabase URL carregada:", supabaseUrl ? "Configurada ✅" : "Vazia ❌");
-console.log("Supabase Key carregada:", supabaseAnonKey ? "Configurada ✅" : "Vazia ❌");
+const supabaseUrl = getSafeEnv('SUPABASE_URL');
+const supabaseAnonKey = getSafeEnv('SUPABASE_ANON_KEY');
 
-const isValidConfig = supabaseUrl.startsWith('http') && supabaseAnonKey.length > 10;
+// Diagnóstico silencioso
+const isValidConfig = !!supabaseUrl && supabaseUrl.startsWith('http') && !!supabaseAnonKey && supabaseAnonKey.length > 10;
 
 export const supabase: SupabaseClient | null = isValidConfig 
   ? createClient(supabaseUrl, supabaseAnonKey) 
@@ -30,10 +36,7 @@ export const supabaseService = {
   },
 
   async getState(): Promise<AppState | null> {
-    if (!supabase) {
-      console.warn("⚠️ Supabase não inicializado. Verifique as variáveis de ambiente no Render.");
-      return null;
-    }
+    if (!supabase) return null;
     
     try {
       const { data, error } = await supabase
@@ -43,20 +46,13 @@ export const supabaseService = {
         .maybeSingle();
 
       if (error) {
-        console.error(`❌ Erro Supabase (${error.code}):`, error.message);
-        if (error.code === '42P01') {
-          console.error("DICA: A tabela 'app_data' não existe no seu banco de dados Supabase.");
-        }
-        if (error.message.includes('policy')) {
-          console.error("DICA: Erro de permissão RLS. Execute o SQL de 'Acesso Público Total'.");
-        }
-        throw error;
+        console.warn(`Supabase: ${error.message}`);
+        return null;
       }
       
       return data?.state as AppState || null;
     } catch (e) {
-      console.error("❌ Falha crítica ao ler da nuvem:", e);
-      throw e;
+      return null;
     }
   },
 
@@ -70,19 +66,13 @@ export const supabaseService = {
         updated_at: new Date().toISOString()
       };
 
-      const { error } = await supabase
+      await supabase
         .from('app_data')
         .upsert(payload, { onConflict: 'id' });
 
-      if (error) {
-        console.error("❌ Erro ao salvar dados na nuvem:", error.message);
-        throw error;
-      }
-
       return localState;
     } catch (e) {
-      console.error("❌ Falha crítica ao salvar na nuvem:", e);
-      throw e;
+      return localState;
     }
   },
 
@@ -95,15 +85,12 @@ export const supabaseService = {
         'postgres_changes',
         { event: '*', schema: 'public', table: 'app_data', filter: 'id=eq.current_state' },
         (payload) => {
-          console.log("🔔 Sincronização em tempo real: Novos dados recebidos!");
           if (payload.new && (payload.new as any).state) {
             onUpdate((payload.new as any).state as AppState);
           }
         }
       )
-      .subscribe((status) => {
-        console.log("Status da conexão Realtime:", status);
-      });
+      .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
