@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Person, Particularity } from '../types';
 import { Icons } from '../constants';
 
@@ -11,17 +11,21 @@ interface ParticularityManagerProps {
 }
 
 const ParticularityManager: React.FC<ParticularityManagerProps> = ({ particularities, people, onAdd, onRemove }) => {
-  const getLocalDateStr = () => {
-    const d = new Date();
+  const getLocalDateStr = (d: Date = new Date()) => {
     const offset = d.getTimezoneOffset();
     const localDate = new Date(d.getTime() - (offset * 60 * 1000));
     return localDate.toISOString().split('T')[0];
   };
 
+  // State para o formulário
   const [selectedPerson, setSelectedPerson] = useState('');
   const [date, setDate] = useState(getLocalDateStr());
   const [type, setType] = useState<Particularity['type']>('Saúde');
   const [description, setDescription] = useState('');
+
+  // State para os filtros
+  const [filterStartDate, setFilterStartDate] = useState('');
+  const [filterEndDate, setFilterEndDate] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,6 +40,25 @@ const ParticularityManager: React.FC<ParticularityManagerProps> = ({ particulari
     });
 
     setDescription('');
+  };
+
+  const filteredParticularities = useMemo(() => {
+    let result = [...particularities];
+    
+    if (filterStartDate) {
+      result = result.filter(p => p.date >= filterStartDate);
+    }
+    
+    if (filterEndDate) {
+      result = result.filter(p => p.date <= filterEndDate);
+    }
+    
+    return result.sort((a, b) => b.date.localeCompare(a.date));
+  }, [particularities, filterStartDate, filterEndDate]);
+
+  const clearFilters = () => {
+    setFilterStartDate('');
+    setFilterEndDate('');
   };
 
   const getTypeStyle = (t: Particularity['type']) => {
@@ -112,25 +135,53 @@ const ParticularityManager: React.FC<ParticularityManagerProps> = ({ particulari
         </div>
       </div>
 
-      <div className="md:col-span-2">
+      <div className="md:col-span-2 space-y-4">
+        {/* Filtros de Listagem */}
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 flex flex-wrap items-end gap-4">
+          <div className="flex-1 min-w-[140px]">
+             <label className="block text-[10px] font-black uppercase text-slate-400 mb-1.5 tracking-widest">Início do Período</label>
+             <input 
+               type="date" 
+               value={filterStartDate} 
+               onChange={(e) => setFilterStartDate(e.target.value)}
+               className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-bold dark:text-white outline-none"
+             />
+          </div>
+          <div className="flex-1 min-w-[140px]">
+             <label className="block text-[10px] font-black uppercase text-slate-400 mb-1.5 tracking-widest">Fim do Período</label>
+             <input 
+               type="date" 
+               value={filterEndDate} 
+               onChange={(e) => setFilterEndDate(e.target.value)}
+               className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-bold dark:text-white outline-none"
+             />
+          </div>
+          <button 
+            onClick={clearFilters}
+            className="px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200 transition-colors"
+          >
+            Limpar Filtros
+          </button>
+        </div>
+
         <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
           <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
             <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 tracking-tight">Histórico de Particularidades</h3>
             <span className="bg-slate-100 dark:bg-slate-800 text-slate-500 px-3 py-1 rounded-full text-[10px] font-black uppercase">
-              {particularities.length} Registros
+              {filteredParticularities.length} Registros
             </span>
           </div>
           
           <div className="divide-y divide-slate-100 dark:divide-slate-800">
-            {particularities.length === 0 ? (
+            {filteredParticularities.length === 0 ? (
               <div className="p-16 text-center text-slate-400">
                 <div className="bg-slate-50 dark:bg-slate-800 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Icons.Note />
                 </div>
-                <p className="font-bold text-xs uppercase tracking-widest">Nenhuma particularidade registrada.</p>
+                <p className="font-bold text-xs uppercase tracking-widest">Nenhuma particularidade encontrada para este período.</p>
               </div>
             ) : (
-              [...particularities].sort((a, b) => b.date.localeCompare(a.date)).map((p) => {
+              filteredParticularities.map((p) => {
                 const person = people.find(per => per.id === p.personId);
                 return (
                   <div key={p.id} className="p-6 flex items-start justify-between hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">

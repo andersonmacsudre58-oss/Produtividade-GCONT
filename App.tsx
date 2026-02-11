@@ -46,13 +46,18 @@ const App: React.FC = () => {
     }
   }, []);
 
+  // Efeito de Sincronização Automática entre PCs
   useEffect(() => {
     if (!isLoggedIn) return;
-    const unsub = supabaseService.subscribeToChanges((newState) => {
+    
+    // Conecta ao "rádio" do Supabase
+    const unsubscribe = supabaseService.subscribeToChanges((newState) => {
+      // Quando este PC "ouve" que outro PC salvou algo, ele atualiza o estado local
       setState(prev => ({ ...newState, userRole: prev.userRole }));
-      setLastSync(new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }));
+      setLastSync(new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
     });
-    return unsub;
+    
+    return () => unsubscribe();
   }, [isLoggedIn]);
 
   useEffect(() => {
@@ -61,17 +66,22 @@ const App: React.FC = () => {
     localStorage.setItem('app-theme', theme);
   }, [theme]);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  useEffect(() => { 
+    loadData(); 
+  }, [loadData]);
 
   const persist = async (newState: AppState) => {
+    // 1. Atualiza a interface IMEDIATAMENTE no computador atual
     setState(newState);
+    // 2. Tenta salvar na nuvem (isso vai avisar todos os outros PCs via Realtime)
     await apiService.saveState(newState);
-    setLastSync(new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }));
+    setLastSync(new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
   };
 
   if (isLoading) return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center">
       <div className="w-12 h-12 border-4 border-blue-600/20 border-t-blue-600 rounded-full animate-spin"></div>
+      <p className="mt-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Estabelecendo Conexão...</p>
     </div>
   );
 
@@ -96,7 +106,10 @@ const App: React.FC = () => {
               {activeTab === 'particularities' && 'Ocorrências'}
               {activeTab === 'services' && 'Serviços'}
             </h1>
-            {lastSync && <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Sincronizado: {lastSync}</p>}
+            <div className="flex items-center gap-2 mt-1">
+               <div className={`w-1.5 h-1.5 rounded-full ${isSyncing ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'}`}></div>
+               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Sincronizado: {lastSync || '--:--'}</p>
+            </div>
           </div>
           
           <div className="flex items-center gap-3">
@@ -105,42 +118,41 @@ const App: React.FC = () => {
               className="flex items-center gap-2 px-6 py-3 bg-white dark:bg-slate-800 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-sm border border-slate-100 dark:border-slate-700 hover:bg-slate-50 transition-all active:scale-95 disabled:opacity-50"
             >
               <div className={isSyncing ? 'animate-spin' : ''}><Icons.Refresh /></div>
-              {isSyncing ? 'Atualizando...' : 'Sincronizar Manual'}
+              {isSyncing ? 'Atualizando...' : 'Recarregar Tudo'}
             </button>
-            <div className={`px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest text-white ${state.userRole === 'master' ? 'bg-indigo-600' : 'bg-emerald-600'}`}>
-              {state.userRole === 'master' ? 'Master' : 'Básico'}
-            </div>
           </div>
         </header>
 
-        {activeTab === 'dashboard' && <Dashboard state={state} onRefresh={loadData} />}
-        {activeTab === 'people' && state.userRole === 'master' && (
-          <PeopleManager people={state.people} onAdd={(p) => persist({...state, people: [...state.people, p]})} onRemove={(id) => persist({...state, people: state.people.filter(x => x.id !== id)})} />
-        )}
-        {activeTab === 'logs' && (
-          <DailyLog 
-            tasks={state.tasks} people={state.people} categories={state.serviceCategories}
-            onAddTask={(t) => persist({...state, tasks: [...state.tasks, t]})} 
-            onEditTask={(t) => persist({...state, tasks: state.tasks.map(x => x.id === t.id ? t : x)})}
-            onRemoveTask={(id) => persist({...state, tasks: state.tasks.filter(x => x.id !== id)})}
-            userRole={state.userRole} onRefresh={loadData}
-          />
-        )}
-        {activeTab === 'particularities' && (
-          <ParticularityManager 
-            particularities={state.particularities} people={state.people}
-            onAdd={(p) => persist({...state, particularities: [...state.particularities, p]})}
-            onRemove={(id) => persist({...state, particularities: state.particularities.filter(x => x.id !== id)})}
-          />
-        )}
-        {activeTab === 'services' && state.userRole === 'master' && (
-          <ServiceManager 
-            categories={state.serviceCategories} 
-            onAdd={(c) => persist({...state, serviceCategories: [...state.serviceCategories, c]})} 
-            onRemove={(id) => persist({...state, serviceCategories: state.serviceCategories.filter(x => x.id !== id)})} 
-            state={state} onImport={(s) => persist(s)}
-          />
-        )}
+        <div className="min-h-0 min-w-0">
+          {activeTab === 'dashboard' && <Dashboard state={state} onRefresh={loadData} />}
+          {activeTab === 'people' && state.userRole === 'master' && (
+            <PeopleManager people={state.people} onAdd={(p) => persist({...state, people: [...state.people, p]})} onRemove={(id) => persist({...state, people: state.people.filter(x => x.id !== id)})} />
+          )}
+          {activeTab === 'logs' && (
+            <DailyLog 
+              tasks={state.tasks} people={state.people} categories={state.serviceCategories}
+              onAddTask={(t) => persist({...state, tasks: [...state.tasks, t]})} 
+              onEditTask={(t) => persist({...state, tasks: state.tasks.map(x => x.id === t.id ? t : x)})}
+              onRemoveTask={(id) => persist({...state, tasks: state.tasks.filter(x => x.id !== id)})}
+              userRole={state.userRole} onRefresh={loadData}
+            />
+          )}
+          {activeTab === 'particularities' && (
+            <ParticularityManager 
+              particularities={state.particularities} people={state.people}
+              onAdd={(p) => persist({...state, particularities: [...state.particularities, p]})}
+              onRemove={(id) => persist({...state, particularities: state.particularities.filter(x => x.id !== id)})}
+            />
+          )}
+          {activeTab === 'services' && state.userRole === 'master' && (
+            <ServiceManager 
+              categories={state.serviceCategories} 
+              onAdd={(c) => persist({...state, serviceCategories: [...state.serviceCategories, c]})} 
+              onRemove={(id) => persist({...state, serviceCategories: state.serviceCategories.filter(x => x.id !== id)})} 
+              state={state} onImport={(s) => persist(s)}
+            />
+          )}
+        </div>
       </main>
     </div>
   );

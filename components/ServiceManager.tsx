@@ -1,6 +1,6 @@
 
 import React, { useState, useRef } from 'react';
-import { ServiceCategory, AppState } from '../types';
+import { ServiceCategory, AppState, Task } from '../types';
 import { Icons, PRESET_COLORS } from '../constants';
 
 interface ServiceManagerProps {
@@ -38,6 +38,44 @@ const ServiceManager: React.FC<ServiceManagerProps> = ({ categories, onAdd, onRe
     linkElement.setAttribute('href', dataUri);
     linkElement.setAttribute('download', exportFileDefaultName);
     linkElement.click();
+  };
+
+  const exportToExcel = () => {
+    if (!state.tasks || state.tasks.length === 0) {
+      alert("Não há lançamentos para exportar.");
+      return;
+    }
+
+    // Cabeçalhos para o Excel
+    const headers = ["Data", "Colaborador", "Servico", "Processos Atribuidos", "Qtd Realizada", "Notas Fiscais"];
+    
+    // Mapear os dados cruzando IDs com nomes reais
+    const rows = state.tasks.map(task => {
+      const person = state.people.find(p => p.id === task.personId)?.name || "Desconhecido";
+      const category = state.serviceCategories.find(c => c.id === task.serviceCategoryId)?.name || "N/A";
+      
+      // Sanitizar campos para CSV (evitar quebra de linha ou aspas problemáticas)
+      return [
+        task.date,
+        `"${person.replace(/"/g, '""')}"`,
+        `"${category.replace(/"/g, '""')}"`,
+        task.assignedProcesses || 0,
+        task.processQuantity || 0,
+        task.invoiceQuantity || 0
+      ].join(";"); // Usar ponto e vírgula para compatibilidade com Excel PT-BR
+    });
+
+    // BOM (Byte Order Mark) para garantir que o Excel entenda como UTF-8
+    const csvContent = "\uFEFF" + [headers.join(";"), ...rows].join("\n");
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `relatorio_produtividade_total_${new Date().toISOString().split('T')[0]}.csv`);
+    link.click();
+    
+    URL.revokeObjectURL(url);
   };
 
   const handleImportClick = () => {
@@ -117,18 +155,26 @@ const ServiceManager: React.FC<ServiceManagerProps> = ({ categories, onAdd, onRe
               <div className="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg text-slate-600 dark:text-slate-400">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" /></svg>
               </div>
-              <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">Banco de Dados</h3>
+              <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">Relatórios & Backup</h3>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-500 mb-6 font-medium leading-relaxed">
-              O sistema sincroniza com o banco de dados em tempo real. Você pode exportar backups manuais.
+              Exportar todos os lançamentos históricos para Excel ou baixar um arquivo de backup do sistema.
             </p>
             <div className="space-y-3">
+              <button
+                onClick={exportToExcel}
+                className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-indigo-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 dark:shadow-none active:scale-95"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                Exportar Lançamentos (Excel/CSV)
+              </button>
+              <div className="w-full h-px bg-slate-100 dark:bg-slate-800 my-2"></div>
               <button
                 onClick={exportBackup}
                 className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 rounded-xl font-bold text-sm hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                Backup dos Dados (JSON)
+                Backup Completo (JSON)
               </button>
               <button
                 onClick={handleImportClick}
