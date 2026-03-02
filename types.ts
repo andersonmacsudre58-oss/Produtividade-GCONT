@@ -11,6 +11,7 @@ export interface Person {
   id: string;
   name: string;
   role: string;
+  isHidden?: boolean;
 }
 
 export interface Task {

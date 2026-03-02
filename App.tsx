@@ -126,7 +126,12 @@ const App: React.FC = () => {
         <div className="min-h-0 min-w-0">
           {activeTab === 'dashboard' && <Dashboard state={state} onRefresh={loadData} />}
           {activeTab === 'people' && state.userRole === 'master' && (
-            <PeopleManager people={state.people} onAdd={(p) => persist({...state, people: [...state.people, p]})} onRemove={(id) => persist({...state, people: state.people.filter(x => x.id !== id)})} />
+            <PeopleManager 
+              people={state.people} 
+              onAdd={(p) => persist({...state, people: [...state.people, p]})} 
+              onRemove={(id) => persist({...state, people: state.people.filter(x => x.id !== id)})} 
+              onUpdate={(p) => persist({...state, people: state.people.map(x => x.id === p.id ? p : x)})}
+            />
           )}
           {activeTab === 'logs' && (
             <DailyLog 

@@ -7,9 +7,10 @@ interface PeopleManagerProps {
   people: Person[];
   onAdd: (person: Person) => void;
   onRemove: (id: string) => void;
+  onUpdate: (person: Person) => void;
 }
 
-const PeopleManager: React.FC<PeopleManagerProps> = ({ people, onAdd, onRemove }) => {
+const PeopleManager: React.FC<PeopleManagerProps> = ({ people, onAdd, onRemove, onUpdate }) => {
   const [name, setName] = useState('');
   const [role, setRole] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -115,17 +116,26 @@ const PeopleManager: React.FC<PeopleManagerProps> = ({ people, onAdd, onRemove }
                       {person.name.charAt(0).toUpperCase()}
                     </div>
                     <div>
-                      <p className="font-black text-slate-800 dark:text-slate-100 text-lg tracking-tight">{person.name}</p>
-                      <p className="text-[10px] text-slate-400 dark:text-slate-500 uppercase font-black tracking-widest">{person.role}</p>
+                      <p className={`font-black text-slate-800 dark:text-slate-100 text-lg tracking-tight ${person.isHidden ? 'opacity-40 line-through' : ''}`}>{person.name}</p>
+                      <p className="text-[10px] text-slate-400 dark:text-slate-500 uppercase font-black tracking-widest">{person.role} {person.isHidden && '(OCULTO)'}</p>
                     </div>
                   </div>
-                  <button
-                    onClick={() => { if(confirm(`Remover ${person.name}?`)) onRemove(person.id); }}
-                    className="p-3 text-slate-300 dark:text-slate-600 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all opacity-0 group-hover:opacity-100"
-                    title="Remover colaborador"
-                  >
-                    <Icons.Trash />
-                  </button>
+                  <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                    <button
+                      onClick={() => onUpdate({ ...person, isHidden: !person.isHidden })}
+                      className={`p-3 rounded-xl transition-all ${person.isHidden ? 'text-amber-500 bg-amber-50 dark:bg-amber-900/20' : 'text-slate-300 dark:text-slate-600 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20'}`}
+                      title={person.isHidden ? "Mostrar na lista de registros" : "Ocultar da lista de registros"}
+                    >
+                      {person.isHidden ? <Icons.EyeOff /> : <Icons.Eye />}
+                    </button>
+                    <button
+                      onClick={() => { if(confirm(`Remover ${person.name}?`)) onRemove(person.id); }}
+                      className="p-3 text-slate-300 dark:text-slate-600 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all"
+                      title="Remover colaborador"
+                    >
+                      <Icons.Trash />
+                    </button>
+                  </div>
                 </div>
               ))
             )}

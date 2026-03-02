@@ -116,7 +116,7 @@ const DailyLog: React.FC<DailyLogProps> = ({ tasks, people, categories, onAddTas
             <label className="block text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 mb-1.5 tracking-wider">Colaborador</label>
             <select value={selectedPerson} onChange={(e) => setSelectedPerson(e.target.value)} className="w-full px-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-blue-500 transition-all text-xs font-medium" required>
               <option value="">Selecione...</option>
-              {people.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+              {people.filter(p => !p.isHidden || p.id === selectedPerson).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
           </div>
           <div className="lg:col-span-1">
@@ -175,7 +175,7 @@ const DailyLog: React.FC<DailyLogProps> = ({ tasks, people, categories, onAddTas
                 className="bg-transparent text-sm font-bold text-slate-700 dark:text-slate-200 outline-none cursor-pointer"
               >
                 <option value="" className="dark:bg-slate-900">Todos</option>
-                {people.map(p => (
+                {people.filter(p => !p.isHidden || p.id === filterPersonId).map(p => (
                   <option key={p.id} value={p.id} className="dark:bg-slate-900">{p.name}</option>
                 ))}
               </select>

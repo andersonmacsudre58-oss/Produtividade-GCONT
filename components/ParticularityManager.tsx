@@ -87,7 +87,7 @@ const ParticularityManager: React.FC<ParticularityManagerProps> = ({ particulari
                 required
               >
                 <option value="">Selecione...</option>
-                {people.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                {people.filter(p => !p.isHidden || p.id === selectedPerson).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
             </div>
             <div>
