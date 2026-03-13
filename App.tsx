@@ -7,13 +7,14 @@ import PeopleManager from './components/PeopleManager';
 import DailyLog from './components/DailyLog';
 import ServiceManager from './components/ServiceManager';
 import ParticularityManager from './components/ParticularityManager';
+import ProcessFlowManager from './components/ProcessFlowManager';
 import Login from './components/Login';
 import { DEFAULT_CATEGORIES, Icons } from './constants';
 import { apiService } from './services/api';
 import { supabaseService } from './services/supabase';
 
 const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'people' | 'logs' | 'services' | 'particularities'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'people' | 'logs' | 'services' | 'particularities' | 'fluxo'>('dashboard');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -28,6 +29,7 @@ const App: React.FC = () => {
     people: [], 
     tasks: [], 
     particularities: [],
+    processFlows: [],
     serviceCategories: DEFAULT_CATEGORIES,
     userRole: 'master' 
   });
@@ -37,7 +39,13 @@ const App: React.FC = () => {
     try {
       const data = await apiService.loadState();
       if (data) {
-        setState(prev => ({ ...data, userRole: prev.userRole }));
+        setState(prev => ({ 
+          ...prev,
+          ...data, 
+          processFlows: data.processFlows || [],
+          particularities: data.particularities || [],
+          userRole: prev.userRole 
+        }));
         setLastSync(new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }));
       }
     } finally {
@@ -53,7 +61,13 @@ const App: React.FC = () => {
     // Conecta ao "rádio" do Supabase
     const unsubscribe = supabaseService.subscribeToChanges((newState) => {
       // Quando este PC "ouve" que outro PC salvou algo, ele atualiza o estado local
-      setState(prev => ({ ...newState, userRole: prev.userRole }));
+      setState(prev => ({ 
+        ...prev,
+        ...newState, 
+        processFlows: newState.processFlows || [],
+        particularities: newState.particularities || [],
+        userRole: prev.userRole 
+      }));
       setLastSync(new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
     });
     
@@ -104,23 +118,28 @@ const App: React.FC = () => {
               {activeTab === 'people' && 'Equipe'}
               {activeTab === 'logs' && 'Registros'}
               {activeTab === 'particularities' && 'Ocorrências'}
+              {activeTab === 'fluxo' && 'Fluxo de Processos'}
               {activeTab === 'services' && 'Serviços'}
             </h1>
             <div className="flex items-center gap-2 mt-1">
-               <div className={`w-1.5 h-1.5 rounded-full ${isSyncing ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'}`}></div>
-               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Sincronizado: {lastSync || '--:--'}</p>
+               <div className={`w-1.5 h-1.5 rounded-full ${!supabaseService.isConfigured() ? 'bg-slate-300' : isSyncing ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'}`}></div>
+               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                 {!supabaseService.isConfigured() ? 'Modo Local (Offline)' : `Sincronizado: ${lastSync || '--:--'}`}
+               </p>
             </div>
           </div>
           
-          <div className="flex items-center gap-3">
-            <button 
-              onClick={loadData} disabled={isSyncing}
-              className="flex items-center gap-2 px-6 py-3 bg-white dark:bg-slate-800 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-sm border border-slate-100 dark:border-slate-700 hover:bg-slate-50 transition-all active:scale-95 disabled:opacity-50"
-            >
-              <div className={isSyncing ? 'animate-spin' : ''}><Icons.Refresh /></div>
-              {isSyncing ? 'Atualizando...' : 'Recarregar Tudo'}
-            </button>
-          </div>
+            <div className="flex items-center gap-3">
+              {supabaseService.isConfigured() && (
+                <button 
+                  onClick={loadData} disabled={isSyncing}
+                  className="flex items-center gap-2 px-6 py-3 bg-white dark:bg-slate-800 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-sm border border-slate-100 dark:border-slate-700 hover:bg-slate-50 transition-all active:scale-95 disabled:opacity-50"
+                >
+                  <div className={isSyncing ? 'animate-spin' : ''}><Icons.Refresh /></div>
+                  {isSyncing ? 'Atualizando...' : 'Recarregar Tudo'}
+                </button>
+              )}
+            </div>
         </header>
 
         <div className="min-h-0 min-w-0">
@@ -147,6 +166,14 @@ const App: React.FC = () => {
               particularities={state.particularities} people={state.people}
               onAdd={(p) => persist({...state, particularities: [...state.particularities, p]})}
               onRemove={(id) => persist({...state, particularities: state.particularities.filter(x => x.id !== id)})}
+            />
+          )}
+          {activeTab === 'fluxo' && state.userRole === 'master' && (
+            <ProcessFlowManager 
+              processFlows={state.processFlows}
+              onAdd={(f) => persist({...state, processFlows: [...state.processFlows, f]})}
+              onRemove={(id) => persist({...state, processFlows: state.processFlows.filter(x => x.id !== id)})}
+              onUpdate={(f) => persist({...state, processFlows: state.processFlows.map(x => x.id === f.id ? f : x)})}
             />
           )}
           {activeTab === 'services' && state.userRole === 'master' && (

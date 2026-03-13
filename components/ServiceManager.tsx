@@ -91,15 +91,12 @@ const ServiceManager: React.FC<ServiceManagerProps> = ({ categories, onAdd, onRe
       try {
         const json = JSON.parse(event.target?.result as string);
         if (json.people && json.tasks && json.serviceCategories) {
-          if (confirm("Isso irá substituir todos os dados atuais. Deseja continuar?")) {
-            onImport(json);
-            alert("Dados importados com sucesso!");
-          }
+          onImport(json);
         } else {
-          alert("Arquivo inválido. Certifique-se de que é um backup do Prod360.");
+          console.error("Arquivo inválido. Certifique-se de que é um backup do Prod360.");
         }
       } catch (err) {
-        alert("Erro ao processar o arquivo.");
+        console.error("Erro ao processar o arquivo.");
       }
     };
     reader.readAsText(file);

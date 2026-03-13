@@ -8,14 +8,14 @@ const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || '';
 
 const isValid = supabaseUrl.length > 10 && supabaseAnonKey.length > 10;
 
-if (!isValid) {
-  console.error("%c🚨 ERRO: CONEXÃO SUPABASE FALHOU", "color: white; background: red; font-size: 16px; font-weight: bold; padding: 4px;");
-  console.log("Verifique as Environment Variables no Render e use 'Clear Cache and Deploy'.");
-}
-
 export const supabase: SupabaseClient | null = isValid 
   ? createClient(supabaseUrl, supabaseAnonKey) 
   : null;
+
+if (!supabase) {
+  console.log("%cℹ️ Sincronização em nuvem desabilitada (Configuração ausente)", "color: #94a3b8; font-weight: bold;");
+  console.log("Para habilitar a sincronização entre múltiplos computadores, configure SUPABASE_URL e SUPABASE_ANON_KEY nas configurações do projeto.");
+}
 
 export const supabaseService = {
   isConfigured(): boolean {

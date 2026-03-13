@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-  PieChart, Pie, Cell, AreaChart, Area, LabelList
+  PieChart, Pie, Cell, AreaChart, Area, LabelList, LineChart, Line
 } from 'recharts';
 import { AppState, Task, ServiceCategory, Particularity } from '../types';
 import { Icons, PRESET_COLORS } from '../constants';
@@ -11,7 +11,7 @@ import { getProductivityInsights } from '../services/geminiService';
 interface DashboardProps { state: AppState; onRefresh?: () => Promise<void>; }
 
 type PeriodPreset = 'hoje' | 'semanal' | 'quinzenal' | 'mensal' | 'trimestral' | 'anual' | 'custom';
-type DashboardSubTab = 'pagamento' | 'licitacao-diaria';
+type DashboardSubTab = 'pagamento' | 'licitacao-diaria' | 'fluxo-processos';
 
 const Dashboard: React.FC<DashboardProps> = ({ state, onRefresh }) => {
   const getLocalDateStr = (d: Date = new Date()) => {
@@ -27,6 +27,11 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onRefresh }) => {
   const [selectedAnalystId, setSelectedAnalystId] = useState<string | null>(null);
   const [aiInsight, setAiInsight] = useState<string | null>(null);
   const [loadingAi, setLoadingAi] = useState(false);
+  const [flowVisibility, setFlowVisibility] = useState({
+    received: true,
+    transferred: true,
+    completed: true
+  });
 
   useEffect(() => {
     const now = new Date();
@@ -102,6 +107,16 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onRefresh }) => {
     return Object.entries(map).map(([name, value]) => ({ name, value }));
   }, [filteredTasks, state.serviceCategories, selectedAnalystId]);
 
+  const flowData = useMemo(() => {
+    return (state.processFlows || [])
+      .filter(f => (!startDate || f.date >= startDate) && (!endDate || f.date <= endDate))
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .map(f => ({
+        ...f,
+        formattedDate: f.date.split('-').reverse().slice(0, 2).join('/')
+      }));
+  }, [state.processFlows, startDate, endDate]);
+
   const handleGetInsights = async () => {
     if (filteredTasks.length === 0) return;
     setLoadingAi(true);
@@ -124,6 +139,7 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onRefresh }) => {
           <div className="flex gap-2 mt-2">
             <button onClick={() => {setActiveSubTab('pagamento'); setSelectedAnalystId(null);}} className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeSubTab === 'pagamento' ? 'bg-blue-600 text-white shadow-lg' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}>Pagamentos</button>
             <button onClick={() => {setActiveSubTab('licitacao-diaria'); setSelectedAnalystId(null);}} className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeSubTab === 'licitacao-diaria' ? 'bg-indigo-600 text-white shadow-lg' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}>Licitação/Diária</button>
+            <button onClick={() => {setActiveSubTab('fluxo-processos'); setSelectedAnalystId(null);}} className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeSubTab === 'fluxo-processos' ? 'bg-emerald-600 text-white shadow-lg' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}>Fluxo de Processos</button>
           </div>
         </div>
         
@@ -240,7 +256,7 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onRefresh }) => {
             <div className="h-[450px]">
               {barData.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={barData} margin={{ top: 30, right: 10, left: -20, bottom: 20 }} onClick={(e) => e?.activePayload && setSelectedAnalystId(e.activePayload[0].payload.id)}>
+                  <BarChart data={barData} margin={{ top: 30, right: 10, left: -20, bottom: 20 }} onClick={(e: any) => e?.activePayload && setSelectedAnalystId(e.activePayload[0].payload.id)}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} strokeOpacity={0.05} />
                     <XAxis dataKey="name" fontSize={10} fontWeight={900} axisLine={false} tickLine={false} stroke="#94a3b8" />
                     <YAxis fontSize={10} axisLine={false} tickLine={false} stroke="#94a3b8" />
@@ -328,7 +344,7 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onRefresh }) => {
             </div>
           </div>
         </div>
-      ) : (
+      ) : activeSubTab === 'licitacao-diaria' ? (
         <div className="bg-white dark:bg-slate-900 p-12 rounded-[48px] shadow-xl border border-slate-100 dark:border-slate-800 min-h-[650px] flex flex-col items-center justify-center animate-in slide-in-from-bottom-8 duration-700">
            <div className="text-center mb-16">
              <h3 className="text-4xl font-black text-slate-800 dark:text-slate-100 uppercase tracking-tighter">Diaria/Licitação</h3>
@@ -371,6 +387,60 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onRefresh }) => {
               ) : (
                 <div className="h-full flex flex-col items-center justify-center text-slate-200 uppercase font-black tracking-[0.3em] italic">
                   <Icons.Task /><p className="mt-8 text-sm">Sem movimentação registrada nesta categoria</p>
+                </div>
+              )}
+           </div>
+        </div>
+      ) : (
+        <div className="bg-white dark:bg-slate-900 p-12 rounded-[48px] shadow-xl border border-slate-100 dark:border-slate-800 min-h-[650px] flex flex-col items-center justify-center animate-in slide-in-from-bottom-8 duration-700">
+           <div className="text-center mb-12">
+             <h3 className="text-4xl font-black text-slate-800 dark:text-slate-100 uppercase tracking-tighter">Fluxo de Processos</h3>
+             <p className="text-slate-400 font-bold mt-4 tracking-widest text-xs uppercase italic">Acompanhamento de entrada, tramitação e conclusão</p>
+             
+             <div className="flex flex-wrap justify-center gap-4 mt-10">
+               <button 
+                 onClick={() => setFlowVisibility(v => ({ ...v, received: !v.received }))}
+                 className={`px-6 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all flex items-center gap-2 ${flowVisibility.received ? 'bg-blue-50 border-blue-200 text-blue-600 shadow-sm' : 'bg-white border-slate-100 text-slate-400 opacity-60'}`}
+               >
+                 <div className={`w-2 h-2 rounded-full ${flowVisibility.received ? 'bg-blue-500' : 'bg-slate-300'}`}></div>
+                 Recebidos
+               </button>
+               <button 
+                 onClick={() => setFlowVisibility(v => ({ ...v, transferred: !v.transferred }))}
+                 className={`px-6 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all flex items-center gap-2 ${flowVisibility.transferred ? 'bg-indigo-50 border-indigo-200 text-indigo-600 shadow-sm' : 'bg-white border-slate-100 text-slate-400 opacity-60'}`}
+               >
+                 <div className={`w-2 h-2 rounded-full ${flowVisibility.transferred ? 'bg-indigo-500' : 'bg-slate-300'}`}></div>
+                 Tramitados
+               </button>
+               <button 
+                 onClick={() => setFlowVisibility(v => ({ ...v, completed: !v.completed }))}
+                 className={`px-6 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all flex items-center gap-2 ${flowVisibility.completed ? 'bg-emerald-50 border-emerald-200 text-emerald-600 shadow-sm' : 'bg-white border-slate-100 text-slate-400 opacity-60'}`}
+               >
+                 <div className={`w-2 h-2 rounded-full ${flowVisibility.completed ? 'bg-emerald-500' : 'bg-slate-300'}`}></div>
+                 Realizados
+               </button>
+             </div>
+           </div>
+           <div className="w-full h-[500px]">
+              {flowData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={flowData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} strokeOpacity={0.1} />
+                    <XAxis dataKey="formattedDate" fontSize={12} fontWeight={900} axisLine={false} tickLine={false} stroke="#94a3b8" />
+                    <YAxis fontSize={12} axisLine={false} tickLine={false} stroke="#94a3b8" />
+                    <Tooltip 
+                      contentStyle={{borderRadius: '24px', border: 'none', boxShadow: '0 20px 60px -10px rgba(0,0,0,0.15)'}} 
+                      itemStyle={{fontSize: '12px', fontWeight: 900}}
+                    />
+                    <Legend verticalAlign="top" align="right" iconType="circle" wrapperStyle={{paddingBottom: '40px', fontWeight: 900, fontSize: '12px'}} />
+                    {flowVisibility.received && <Line type="monotone" dataKey="received" name="Recebidos" stroke="#3b82f6" strokeWidth={4} dot={{ r: 6, strokeWidth: 2, fill: '#fff' }} activeDot={{ r: 8 }} />}
+                    {flowVisibility.transferred && <Line type="monotone" dataKey="transferred" name="Tramitados" stroke="#6366f1" strokeWidth={4} dot={{ r: 6, strokeWidth: 2, fill: '#fff' }} activeDot={{ r: 8 }} />}
+                    {flowVisibility.completed && <Line type="monotone" dataKey="completed" name="Realizados" stroke="#10b981" strokeWidth={4} dot={{ r: 6, strokeWidth: 2, fill: '#fff' }} activeDot={{ r: 8 }} />}
+                  </LineChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-full flex flex-col items-center justify-center text-slate-200 uppercase font-black tracking-[0.3em] italic">
+                  <Icons.Refresh /><p className="mt-8 text-sm">Sem dados de fluxo registrados para este período</p>
                 </div>
               )}
            </div>

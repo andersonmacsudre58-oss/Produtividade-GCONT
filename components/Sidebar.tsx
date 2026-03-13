@@ -4,8 +4,8 @@ import { Icons } from '../constants';
 import { UserRole } from '../types';
 
 interface SidebarProps {
-  activeTab: 'dashboard' | 'people' | 'logs' | 'services' | 'particularities';
-  setActiveTab: (tab: 'dashboard' | 'people' | 'logs' | 'services' | 'particularities') => void;
+  activeTab: 'dashboard' | 'people' | 'logs' | 'services' | 'particularities' | 'fluxo';
+  setActiveTab: (tab: 'dashboard' | 'people' | 'logs' | 'services' | 'particularities' | 'fluxo') => void;
   userRole: UserRole;
   onRoleChange: (role: UserRole) => void;
   onLogout: () => void;
@@ -19,6 +19,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, userRole, on
     { id: 'people', label: 'Equipe', icon: <Icons.People />, restricted: true },
     { id: 'logs', label: 'Registros', icon: <Icons.Calendar />, restricted: false },
     { id: 'particularities', label: 'Particularidades', icon: <Icons.Note />, restricted: false },
+    { id: 'fluxo', label: 'Fluxo de Processos', icon: <Icons.Refresh />, restricted: true },
     { id: 'services', label: 'Serviços', icon: <Icons.Settings />, restricted: true },
   ] as const;
 

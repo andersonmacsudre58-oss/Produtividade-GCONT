@@ -129,7 +129,7 @@ const PeopleManager: React.FC<PeopleManagerProps> = ({ people, onAdd, onRemove, 
                       {person.isHidden ? <Icons.EyeOff /> : <Icons.Eye />}
                     </button>
                     <button
-                      onClick={() => { if(confirm(`Remover ${person.name}?`)) onRemove(person.id); }}
+                      onClick={() => onRemove(person.id)}
                       className="p-3 text-slate-300 dark:text-slate-600 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all"
                       title="Remover colaborador"
                     >

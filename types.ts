@@ -32,10 +32,19 @@ export interface Particularity {
   description: string;
 }
 
+export interface ProcessFlow {
+  id: string;
+  date: string; // ISO date string YYYY-MM-DD
+  received: number;
+  transferred: number;
+  completed: number;
+}
+
 export interface AppState {
   people: Person[];
   tasks: Task[];
   particularities: Particularity[];
+  processFlows: ProcessFlow[];
   serviceCategories: ServiceCategory[];
   userRole: UserRole;
 }
