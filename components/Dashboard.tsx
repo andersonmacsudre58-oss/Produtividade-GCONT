@@ -117,6 +117,32 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onRefresh }) => {
       }));
   }, [state.processFlows, startDate, endDate]);
 
+  const flowTotals = useMemo(() => {
+    return flowData.reduce((acc, f) => ({
+      received: acc.received + (f.received || 0),
+      transferred: acc.transferred + (f.transferred || 0),
+      completed: acc.completed + (f.completed || 0)
+    }), { received: 0, transferred: 0, completed: 0 });
+  }, [flowData]);
+
+  const flowPieData = useMemo(() => {
+    const { received, transferred, completed } = flowTotals;
+    if (received === 0 && transferred === 0 && completed === 0) return [];
+    return [
+      { name: 'Recebidos', value: received, color: '#3b82f6' },
+      { name: 'Tramitados', value: transferred, color: '#6366f1' },
+      { name: 'Realizados', value: completed, color: '#10b981' }
+    ];
+  }, [flowTotals]);
+
+  const flowBarData = useMemo(() => {
+    return [
+      { name: 'Recebidos', value: flowTotals.received, fill: '#3b82f6' },
+      { name: 'Tramitados', value: flowTotals.transferred, fill: '#6366f1' },
+      { name: 'Realizados', value: flowTotals.completed, fill: '#10b981' }
+    ];
+  }, [flowTotals]);
+
   const handleGetInsights = async () => {
     if (filteredTasks.length === 0) return;
     setLoadingAi(true);
@@ -421,7 +447,8 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onRefresh }) => {
                </button>
              </div>
            </div>
-           <div className="w-full h-[500px]">
+           
+           <div className="w-full h-[400px] mb-12">
               {flowData.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={flowData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
@@ -443,6 +470,58 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onRefresh }) => {
                   <Icons.Refresh /><p className="mt-8 text-sm">Sem dados de fluxo registrados para este período</p>
                 </div>
               )}
+           </div>
+
+           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full">
+              <div className="bg-slate-50 dark:bg-slate-800/50 p-8 rounded-[32px] border border-slate-100 dark:border-slate-800">
+                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-8">Distribuição Percentual</h4>
+                <div className="h-[300px]">
+                  {flowPieData.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={flowPieData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={60}
+                          outerRadius={100}
+                          paddingAngle={5}
+                          dataKey="value"
+                          label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(1)}%`}
+                        >
+                          {flowPieData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip contentStyle={{borderRadius: '16px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)'}} />
+                        <Legend verticalAlign="bottom" height={36}/>
+                      </PieChart>
+                    </ResponsiveContainer>
+                  ) : <div className="h-full flex items-center justify-center text-slate-300 font-bold uppercase text-[10px]">Sem dados</div>}
+                </div>
+              </div>
+
+              <div className="bg-slate-50 dark:bg-slate-800/50 p-8 rounded-[32px] border border-slate-100 dark:border-slate-800">
+                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-8">Comparativo de Totais</h4>
+                <div className="h-[300px]">
+                  {flowBarData.some(d => d.value > 0) ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={flowBarData} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} strokeOpacity={0.1} />
+                        <XAxis dataKey="name" fontSize={10} fontWeight={900} axisLine={false} tickLine={false} stroke="#94a3b8" />
+                        <YAxis fontSize={10} axisLine={false} tickLine={false} stroke="#94a3b8" />
+                        <Tooltip cursor={{fill: 'transparent'}} contentStyle={{borderRadius: '16px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)'}} />
+                        <Bar dataKey="value" radius={[10, 10, 0, 0]} barSize={40}>
+                          {flowBarData.map((entry, index) => (
+                            <Cell key={`cell-bar-${index}`} fill={entry.fill} />
+                          ))}
+                          <LabelList dataKey="value" position="top" style={{ fontSize: 12, fontWeight: 900, fill: '#64748b' }} />
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : <div className="h-full flex items-center justify-center text-slate-300 font-bold uppercase text-[10px]">Sem dados</div>}
+                </div>
+              </div>
            </div>
         </div>
       )}
