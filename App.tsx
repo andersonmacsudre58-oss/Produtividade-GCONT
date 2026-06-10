@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Person, Task, AppState, ServiceCategory, UserRole, Particularity } from './types';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
@@ -24,7 +24,8 @@ const App: React.FC = () => {
       return (localStorage.getItem('app-theme') as 'light' | 'dark') || 'light';
     } catch { return 'light'; }
   });
-  
+  const [showNotifications, setShowNotifications] = useState(false);
+
   const [state, setState] = useState<AppState>({ 
     people: [], 
     tasks: [], 
@@ -33,6 +34,57 @@ const App: React.FC = () => {
     serviceCategories: DEFAULT_CATEGORIES,
     userRole: 'master' 
   });
+
+  const pendingNotifications = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    return state.tasks
+      .filter(task => {
+        const hasAssignment = task.assignedProcesses && task.assignedProcesses > 0;
+        const notCompleted = !task.processQuantity || task.processQuantity <= 0;
+        if (!hasAssignment || !notCompleted) return false;
+
+        if (!task.date) return false;
+        const taskDate = new Date(task.date + 'T00:00:00');
+        const diffTime = today.getTime() - taskDate.getTime();
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+        if (diffDays < 2) return false;
+
+        const person = state.people.find(p => p.id === task.personId);
+        if (!person || person.isHidden) return false;
+
+        return true;
+      })
+      .map(task => {
+        const person = state.people.find(p => p.id === task.personId);
+        const category = state.serviceCategories.find(c => c.id === task.serviceCategoryId);
+        
+        let formattedDate = task.date;
+        if (task.date) {
+          const parts = task.date.split('-');
+          if (parts.length === 3) {
+            formattedDate = `${parts[2]}/${parts[1]}/${parts[0]}`;
+          }
+        }
+
+        const taskDate = new Date(task.date + 'T00:00:00');
+        const diffTime = today.getTime() - taskDate.getTime();
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+        return {
+          id: task.id,
+          task,
+          personName: person?.name || 'Desconhecido',
+          categoryName: category?.name || 'Serviço',
+          date: task.date,
+          formattedDate,
+          diffDays,
+          assignedProcesses: task.assignedProcesses
+        };
+      })
+      .sort((a, b) => b.date.localeCompare(a.date));
+  }, [state.tasks, state.people, state.serviceCategories]);
 
   const loadData = useCallback(async () => {
     setIsSyncing(true);
@@ -129,7 +181,113 @@ const App: React.FC = () => {
             </div>
           </div>
           
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 relative">
+              {/* Notification Bell */}
+              <div className="relative">
+                <button 
+                  onClick={() => setShowNotifications(!showNotifications)}
+                  className={`relative p-3 rounded-2xl border transition-all active:scale-95 flex items-center justify-center ${
+                    showNotifications 
+                      ? 'bg-blue-50 border-blue-200 text-blue-600 dark:bg-blue-950/50 dark:border-blue-900 dark:text-blue-200' 
+                      : 'bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 shadow-sm'
+                  }`}
+                  title="Notificações de Pendências"
+                  id="notifDropdown"
+                >
+                  <Icons.Bell />
+                  {pendingNotifications.length > 0 && (
+                    <span id="notify" className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-rose-500 text-[9px] font-black text-white ring-2 ring-white dark:ring-slate-950 animate-pulse">
+                      {pendingNotifications.length}
+                    </span>
+                  )}
+                </button>
+
+                {showNotifications && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setShowNotifications(false)}></div>
+                    
+                    <div className="dropdown-menu absolute right-0 mt-3 w-80 sm:w-96 bg-white dark:bg-slate-850 rounded-3xl border border-slate-100 dark:border-slate-700 shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-4 duration-200">
+                      <div className="p-5 border-b border-slate-100 dark:border-slate-700/55 bg-slate-50/50 dark:bg-slate-900/50 flex items-center justify-between">
+                        <span className="text-[11px] font-black text-slate-850 dark:text-slate-100 uppercase tracking-widest flex items-center gap-2">
+                          <Icons.Bell /> Mensagens & Pendências
+                        </span>
+                        <span className="px-2.5 py-1 text-[9px] font-black bg-rose-100 text-rose-600 dark:bg-rose-950/50 dark:text-rose-450 rounded-full uppercase tracking-wider">
+                          {pendingNotifications.length} Pendentes
+                        </span>
+                      </div>
+
+                      <div className="max-h-[350px] overflow-y-auto divide-y divide-slate-100/50 dark:divide-slate-700/30">
+                        {pendingNotifications.length === 0 ? (
+                          <div className="p-10 text-center flex flex-col items-center justify-center gap-3">
+                            <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-950/30 flex items-center justify-center text-emerald-500">
+                              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" /></svg>
+                            </div>
+                            <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none">
+                              Tudo em dia!
+                            </p>
+                            <p className="text-[11px] text-slate-400 dark:text-slate-500 font-medium leading-relaxed max-w-[240px] mx-auto">
+                              Nenhuma atribuição possui atraso de preenchimento de mais de 2 dias.
+                            </p>
+                          </div>
+                        ) : (
+                          pendingNotifications.map((notif) => (
+                            <div 
+                              key={notif.id}
+                              onClick={() => {
+                                setActiveTab('logs');
+                                setShowNotifications(false);
+                              }}
+                              className="p-4 hover:bg-slate-50 dark:hover:bg-slate-750/30 transition-all cursor-pointer group"
+                            >
+                              <div className="flex items-start gap-3">
+                                <div className="p-2.5 rounded-2xl bg-amber-50 dark:bg-amber-950/30 text-amber-500 dark:text-amber-400 mt-0.5 group-hover:scale-105 transition-transform duration-200">
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-start justify-between gap-2">
+                                    <p className="text-[12px] font-black text-slate-850 dark:text-slate-200 truncate pr-1">
+                                      {notif.personName}
+                                    </p>
+                                    <span className="text-[9px] font-black text-rose-500 dark:text-rose-450 shrink-0 whitespace-nowrap bg-rose-50 dark:bg-rose-955/40 px-2 py-0.5 rounded-md">
+                                      {notif.diffDays} dias sem preencher
+                                    </span>
+                                  </div>
+                                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1.5 leading-normal font-medium text-left">
+                                    Atividade de <span className="font-bold text-slate-750 dark:text-slate-300">{notif.categoryName}</span> atribuída em <span className="font-bold">{notif.formattedDate}</span> com <span className="font-bold text-blue-600 dark:text-blue-400">{notif.assignedProcesses}</span> processos está pendente de preenchimento do realizado.
+                                  </p>
+                                  <div className="flex items-center justify-between mt-3 text-[9px] font-black uppercase tracking-wider">
+                                    <span className="opacity-60 bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded text-slate-500 dark:text-slate-400">
+                                      {notif.formattedDate}
+                                    </span>
+                                    <span className="text-blue-500 dark:text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center gap-1">
+                                      Preencher Agora <Icons.Plus />
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+
+                      {pendingNotifications.length > 0 && (
+                        <div className="p-4 bg-slate-50/50 dark:bg-slate-900/55 border-t border-slate-100 dark:border-slate-700/50 text-center">
+                          <button 
+                            onClick={() => {
+                              setActiveTab('logs');
+                              setShowNotifications(false);
+                            }}
+                            className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest hover:underline transition-all"
+                          >
+                            Lista de Notificações e Atividades
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
+
               {supabaseService.isConfigured() && (
                 <button 
                   onClick={loadData} disabled={isSyncing}
