@@ -25,6 +25,20 @@ const App: React.FC = () => {
     } catch { return 'light'; }
   });
   const [showNotifications, setShowNotifications] = useState(false);
+  const [dismissedNotificationIds, setDismissedNotificationIds] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('dismissed-notifications');
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('dismissed-notifications', JSON.stringify(dismissedNotificationIds));
+    } catch (e) {
+      console.error(e);
+    }
+  }, [dismissedNotificationIds]);
 
   const [state, setState] = useState<AppState>({ 
     people: [], 
@@ -41,6 +55,8 @@ const App: React.FC = () => {
 
     return state.tasks
       .filter(task => {
+        if (task.id && dismissedNotificationIds.includes(task.id)) return false;
+
         const hasAssignment = task.assignedProcesses && task.assignedProcesses > 0;
         const notCompleted = !task.processQuantity || task.processQuantity <= 0;
         if (!hasAssignment || !notCompleted) return false;
@@ -84,7 +100,7 @@ const App: React.FC = () => {
         };
       })
       .sort((a, b) => b.date.localeCompare(a.date));
-  }, [state.tasks, state.people, state.serviceCategories]);
+  }, [state.tasks, state.people, state.serviceCategories, dismissedNotificationIds]);
 
   const loadData = useCallback(async () => {
     setIsSyncing(true);
@@ -248,9 +264,25 @@ const App: React.FC = () => {
                                     <p className="text-[12px] font-black text-slate-850 dark:text-slate-200 truncate pr-1">
                                       {notif.personName}
                                     </p>
-                                    <span className="text-[9px] font-black text-rose-500 dark:text-rose-450 shrink-0 whitespace-nowrap bg-rose-50 dark:bg-rose-955/40 px-2 py-0.5 rounded-md">
-                                      {notif.diffDays} dias sem preencher
-                                    </span>
+                                    <div className="flex items-center gap-1 shrink-0">
+                                      <span className="text-[9px] font-black text-rose-500 dark:text-rose-450 shrink-0 whitespace-nowrap bg-rose-50 dark:bg-rose-955/40 px-2 py-0.5 rounded-md">
+                                        {notif.diffDays} dias sem preencher
+                                      </span>
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          if (notif.id) {
+                                            setDismissedNotificationIds(prev => [...prev, notif.id].filter(Boolean) as string[]);
+                                          }
+                                        }}
+                                        className="p-1 rounded-md text-slate-400 hover:text-rose-500 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-all shrink-0"
+                                        title="Esconder esta notificação"
+                                      >
+                                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                      </button>
+                                    </div>
                                   </div>
                                   <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1.5 leading-normal font-medium text-left">
                                     Atividade de <span className="font-bold text-slate-750 dark:text-slate-300">{notif.categoryName}</span> atribuída em <span className="font-bold">{notif.formattedDate}</span> com <span className="font-bold text-blue-600 dark:text-blue-400">{notif.assignedProcesses}</span> processos está pendente de preenchimento do realizado.
@@ -270,8 +302,8 @@ const App: React.FC = () => {
                         )}
                       </div>
 
-                      {pendingNotifications.length > 0 && (
-                        <div className="p-4 bg-slate-50/50 dark:bg-slate-900/55 border-t border-slate-100 dark:border-slate-700/50 text-center">
+                      {(pendingNotifications.length > 0 || dismissedNotificationIds.length > 0) && (
+                        <div className="p-4 bg-slate-50/50 dark:bg-slate-900/55 border-t border-slate-100 dark:border-slate-700/50 text-center flex items-center justify-between gap-4">
                           <button 
                             onClick={() => {
                               setActiveTab('logs');
@@ -279,8 +311,19 @@ const App: React.FC = () => {
                             }}
                             className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest hover:underline transition-all"
                           >
-                            Lista de Notificações e Atividades
+                            Lista de Atividades
                           </button>
+                          
+                          {dismissedNotificationIds.length > 0 && (
+                            <button 
+                              onClick={() => {
+                                setDismissedNotificationIds([]);
+                              }}
+                              className="text-[10px] font-black text-rose-500 dark:text-rose-450 uppercase tracking-widest hover:underline transition-all"
+                            >
+                              Restaurar ({dismissedNotificationIds.length})
+                            </button>
+                          )}
                         </div>
                       )}
                     </div>
