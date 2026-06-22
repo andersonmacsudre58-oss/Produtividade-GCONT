@@ -40,6 +40,15 @@ export interface ProcessFlow {
   completed: number;
 }
 
+export interface Pendency {
+  id: string;
+  personId: string;
+  documentType: 'Relatório' | 'Memorando' | 'Despacho' | 'Disponibilidade';
+  sector: 'GCIF' | 'JURÍDICO';
+  pendingType: 'Contrato de gestão incorreto/ausente' | 'Centro de custo incorreto' | 'Valor da NF incorreto' | 'Anexado incorretamente' | 'Nº da nota incorreto' | 'Nº do memorando incorreto' | 'Natureza incorreta';
+  date: string; // ISO date string YYYY-MM-DD
+}
+
 export interface AppState {
   people: Person[];
   tasks: Task[];
@@ -47,4 +56,5 @@ export interface AppState {
   processFlows: ProcessFlow[];
   serviceCategories: ServiceCategory[];
   userRole: UserRole;
+  pendencies?: Pendency[]; // Optional to avoid breaking old stored state
 }
