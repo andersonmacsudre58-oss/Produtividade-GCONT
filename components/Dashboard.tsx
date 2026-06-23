@@ -29,8 +29,7 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onRefresh }) => {
   const [loadingAi, setLoadingAi] = useState(false);
   const [flowVisibility, setFlowVisibility] = useState({
     received: true,
-    transferred: true,
-    completed: true
+    transferred: true
   });
 
   // States para filtros de Pendências
@@ -132,20 +131,18 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onRefresh }) => {
   }, [flowData]);
 
   const flowPieData = useMemo(() => {
-    const { received, transferred, completed } = flowTotals;
-    if (received === 0 && transferred === 0 && completed === 0) return [];
+    const { received, transferred } = flowTotals;
+    if (received === 0 && transferred === 0) return [];
     return [
-      { name: 'Recebidos', value: received, color: '#3b82f6' },
-      { name: 'Tramitados', value: transferred, color: '#6366f1' },
-      { name: 'Realizados', value: completed, color: '#10b981' }
+      { name: 'Recebidos', value: received, color: '#f97316' },
+      { name: 'Tramitados', value: transferred, color: '#06b6d4' }
     ];
   }, [flowTotals]);
 
   const flowBarData = useMemo(() => {
     return [
-      { name: 'Recebidos', value: flowTotals.received, fill: '#3b82f6' },
-      { name: 'Tramitados', value: flowTotals.transferred, fill: '#6366f1' },
-      { name: 'Realizados', value: flowTotals.completed, fill: '#10b981' }
+      { name: 'Recebidos', value: flowTotals.received, fill: '#f97316' },
+      { name: 'Tramitados', value: flowTotals.transferred, fill: '#06b6d4' }
     ];
   }, [flowTotals]);
 
@@ -402,7 +399,13 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onRefresh }) => {
     });
 
     // Keep those with activity OR those who are in team
-    const filteredList = list.filter(item => item.totalRealizados > 0 || item.totalPendecias > 0);
+    let filteredList = list.filter(item => item.totalRealizados > 0 || item.totalPendecias > 0);
+
+    // Filter by collaborator if one is selected and is not "Todos"
+    if (pendencyCollabId && pendencyCollabId !== 'Todos') {
+      filteredList = filteredList.filter(item => item.id === pendencyCollabId);
+    }
+
     // Sort by totalPendecias desc, then totalRealizados desc, then impactPercent desc
     filteredList.sort((a, b) => b.totalPendecias - a.totalPendecias || b.totalRealizados - a.totalRealizados || b.impactPercent - a.impactPercent);
 
@@ -415,7 +418,7 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onRefresh }) => {
     }
 
     return { list: filteredList, totalRealizadosAll, totalPendeciasAll, totalImpactPercent };
-  }, [state.tasks, state.pendencies, state.people, pendencyYear, pendencyMonth, pendencyDay]);
+  }, [state.tasks, state.pendencies, state.people, pendencyYear, pendencyMonth, pendencyDay, pendencyCollabId]);
 
   const handleGetInsights = async () => {
     if (filteredTasks.length === 0) return;
@@ -799,23 +802,23 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onRefresh }) => {
              <div className="flex flex-wrap justify-center gap-4 mt-10">
                <button 
                  onClick={() => setFlowVisibility(v => ({ ...v, received: !v.received }))}
-                 className={`px-6 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all flex items-center gap-2 ${flowVisibility.received ? 'bg-blue-50 border-blue-200 text-blue-600 shadow-sm' : 'bg-white border-slate-100 text-slate-400 opacity-60'}`}
+                 className={`px-6 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all flex items-center gap-2 ${flowVisibility.received ? 'bg-orange-50 border-orange-200 text-orange-600 shadow-sm dark:bg-orange-950/20 dark:border-orange-950/30 dark:text-orange-400' : 'bg-white border-slate-100 text-slate-400 opacity-60'}`}
                >
-                 <div className={`w-2 h-2 rounded-full ${flowVisibility.received ? 'bg-blue-500' : 'bg-slate-300'}`}></div>
+                 <div className={`w-2 h-2 rounded-full ${flowVisibility.received ? 'bg-orange-500' : 'bg-slate-300'}`}></div>
                  Recebidos
                </button>
                <button 
                  onClick={() => setFlowVisibility(v => ({ ...v, transferred: !v.transferred }))}
-                 className={`px-6 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all flex items-center gap-2 ${flowVisibility.transferred ? 'bg-indigo-50 border-indigo-200 text-indigo-600 shadow-sm' : 'bg-white border-slate-100 text-slate-400 opacity-60'}`}
+                 className={`px-6 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all flex items-center gap-2 ${flowVisibility.transferred ? 'bg-cyan-50 border-cyan-200 text-cyan-600 shadow-sm dark:bg-cyan-950/20 dark:border-cyan-950/30 dark:text-cyan-400' : 'bg-white border-slate-100 text-slate-400 opacity-60'}`}
                >
-                 <div className={`w-2 h-2 rounded-full ${flowVisibility.transferred ? 'bg-indigo-500' : 'bg-slate-300'}`}></div>
+                 <div className={`w-2 h-2 rounded-full ${flowVisibility.transferred ? 'bg-cyan-500' : 'bg-slate-300'}`}></div>
                  Tramitados
                </button>
                <button 
-                 onClick={() => setFlowVisibility(v => ({ ...v, completed: !v.completed }))}
-                 className={`px-6 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all flex items-center gap-2 ${flowVisibility.completed ? 'bg-emerald-50 border-emerald-200 text-emerald-600 shadow-sm' : 'bg-white border-slate-100 text-slate-400 opacity-60'}`}
+                 onClick={() => setFlowVisibility(v => ({ ...v, received: !v.received }))}
+                 className="hidden"
                >
-                 <div className={`w-2 h-2 rounded-full ${flowVisibility.completed ? 'bg-emerald-500' : 'bg-slate-300'}`}></div>
+                 <div className={`w-2 h-2 rounded-full ${flowVisibility.received ? 'bg-emerald-500' : 'bg-slate-300'}`}></div>
                  Realizados
                </button>
              </div>
@@ -833,9 +836,9 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onRefresh }) => {
                       itemStyle={{fontSize: '12px', fontWeight: 900}}
                     />
                     <Legend verticalAlign="top" align="right" iconType="circle" wrapperStyle={{paddingBottom: '40px', fontWeight: 900, fontSize: '12px'}} />
-                    {flowVisibility.received && <Line type="monotone" dataKey="received" name="Recebidos" stroke="#3b82f6" strokeWidth={4} dot={{ r: 6, strokeWidth: 2, fill: '#fff' }} activeDot={{ r: 8 }} />}
-                    {flowVisibility.transferred && <Line type="monotone" dataKey="transferred" name="Tramitados" stroke="#6366f1" strokeWidth={4} dot={{ r: 6, strokeWidth: 2, fill: '#fff' }} activeDot={{ r: 8 }} />}
-                    {flowVisibility.completed && <Line type="monotone" dataKey="completed" name="Realizados" stroke="#10b981" strokeWidth={4} dot={{ r: 6, strokeWidth: 2, fill: '#fff' }} activeDot={{ r: 8 }} />}
+                    {flowVisibility.received && <Line type="monotone" dataKey="received" name="Recebidos" stroke="#f97316" strokeWidth={4} dot={{ r: 6, strokeWidth: 2, fill: '#fff' }} activeDot={{ r: 8 }} />}
+                    {flowVisibility.transferred && <Line type="monotone" dataKey="transferred" name="Tramitados" stroke="#06b6d4" strokeWidth={4} dot={{ r: 6, strokeWidth: 2, fill: '#fff' }} activeDot={{ r: 8 }} />}
+
                   </LineChart>
                 </ResponsiveContainer>
               ) : (

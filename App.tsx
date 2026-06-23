@@ -48,7 +48,17 @@ const App: React.FC = () => {
     processFlows: [],
     pendencies: [],
     serviceCategories: DEFAULT_CATEGORIES,
-    userRole: 'master' 
+    userRole: 'master',
+    pendencyDocumentTypes: ['Relatório', 'Memorando', 'Despacho', 'Disponibilidade'],
+    pendencyTypes: [
+      'Contrato de gestão incorreto/ausente',
+      'Centro de custo incorreto',
+      'Valor da NF incorreto',
+      'Anexado incorretamente',
+      'Natureza incorreta',
+      'Nº da nota incorreto',
+      'Nº do memorando incorreto'
+    ]
   });
 
   const pendingNotifications = useMemo(() => {
@@ -91,6 +101,10 @@ const App: React.FC = () => {
         const anyTaskDismissed = group.tasks.some(t => t.id && dismissedNotificationIds.includes(t.id));
         if (anyTaskDismissed) return false;
 
+        // Skip any task group where at least one task has been explicitly checked as not realized
+        const anyWasNotRealized = group.tasks.some(t => t.wasNotRealized === true);
+        if (anyWasNotRealized) return false;
+
         const hasAssignment = group.assignedProcesses > 0;
         // Notify ONLY if there is progress of exactly 0 (no preenchimento)
         const notCompleted = group.processQuantity <= 0;
@@ -99,7 +113,7 @@ const App: React.FC = () => {
         const taskDate = new Date(group.date + 'T00:00:00');
         const diffTime = today.getTime() - taskDate.getTime();
         const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-        if (diffDays < 2) return false;
+        if (diffDays < 1) return false;
 
         const person = state.people.find(p => p.id === group.personId);
         if (!person || person.isHidden) return false;
@@ -171,6 +185,8 @@ const App: React.FC = () => {
           processFlows: data.processFlows || [],
           particularities: data.particularities || [],
           pendencies: data.pendencies || [],
+          pendencyDocumentTypes: data.pendencyDocumentTypes || prev.pendencyDocumentTypes,
+          pendencyTypes: data.pendencyTypes || prev.pendencyTypes,
           userRole: prev.userRole 
         }));
         setLastSync(new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }));
@@ -194,6 +210,8 @@ const App: React.FC = () => {
         processFlows: newState.processFlows || [],
         particularities: newState.particularities || [],
         pendencies: newState.pendencies || [],
+        pendencyDocumentTypes: newState.pendencyDocumentTypes || prev.pendencyDocumentTypes,
+        pendencyTypes: newState.pendencyTypes || prev.pendencyTypes,
         userRole: prev.userRole 
       }));
       setLastSync(new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
@@ -314,7 +332,7 @@ const App: React.FC = () => {
                                       </p>
                                       <div className="flex items-center gap-1 shrink-0">
                                         <span className="text-[9px] font-black text-rose-500 dark:text-rose-450 shrink-0 whitespace-nowrap bg-rose-50 dark:bg-rose-955/40 px-2 py-0.5 rounded-md">
-                                          {notif.diffDays} dias sem preencher
+                                          {notif.diffDays} {notif.diffDays === 1 ? 'dia' : 'dias'} sem preencher
                                         </span>
                                         <button
                                           onClick={(e) => {
@@ -445,6 +463,18 @@ const App: React.FC = () => {
               people={state.people}
               onAdd={(p) => persist({...state, pendencies: [...(state.pendencies || []), p]})}
               onRemove={(id) => persist({...state, pendencies: (state.pendencies || []).filter(x => x.id !== id)})}
+              documentTypes={state.pendencyDocumentTypes || ['Relatório', 'Memorando', 'Despacho', 'Disponibilidade']}
+              pendingTypes={state.pendencyTypes || [
+                'Contrato de gestão incorreto/ausente',
+                'Centro de custo incorreto',
+                'Valor da NF incorreto',
+                'Anexado incorretamente',
+                'Natureza incorreta',
+                'Nº da nota incorreto',
+                'Nº do memorando incorreto'
+              ]}
+              onUpdateDocumentTypes={(types) => persist({...state, pendencyDocumentTypes: types})}
+              onUpdatePendingTypes={(types) => persist({...state, pendencyTypes: types})}
             />
           )}
         </div>

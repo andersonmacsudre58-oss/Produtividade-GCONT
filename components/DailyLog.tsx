@@ -27,6 +27,7 @@ const DailyLog: React.FC<DailyLogProps> = ({ tasks, people, categories, onAddTas
   const [assignedProcesses, setAssignedProcesses] = useState<number>(0);
   const [processQuantity, setProcessQuantity] = useState<number>(1);
   const [invoiceQuantity, setInvoiceQuantity] = useState<number>(0);
+  const [wasNotRealized, setWasNotRealized] = useState(false);
   const [date, setDate] = useState(getLocalDateStr());
   const [isSyncing, setIsSyncing] = useState(false);
   
@@ -61,8 +62,9 @@ const DailyLog: React.FC<DailyLogProps> = ({ tasks, people, categories, onAddTas
       personId: selectedPerson,
       serviceCategoryId: selectedCategoryId,
       assignedProcesses: Number(assignedProcesses),
-      processQuantity: Number(processQuantity),
-      invoiceQuantity: Number(invoiceQuantity),
+      processQuantity: wasNotRealized ? 0 : Number(processQuantity),
+      invoiceQuantity: wasNotRealized ? 0 : Number(invoiceQuantity),
+      wasNotRealized: wasNotRealized,
       date
     };
 
@@ -76,6 +78,7 @@ const DailyLog: React.FC<DailyLogProps> = ({ tasks, people, categories, onAddTas
     setAssignedProcesses(0);
     setProcessQuantity(1);
     setInvoiceQuantity(0);
+    setWasNotRealized(false);
     setSelectedPerson('');
     setSelectedCategoryId('');
   };
@@ -87,6 +90,7 @@ const DailyLog: React.FC<DailyLogProps> = ({ tasks, people, categories, onAddTas
     setAssignedProcesses(task.assignedProcesses || 0);
     setProcessQuantity(task.processQuantity);
     setInvoiceQuantity(task.invoiceQuantity);
+    setWasNotRealized(!!task.wasNotRealized);
     setDate(task.date);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -96,6 +100,7 @@ const DailyLog: React.FC<DailyLogProps> = ({ tasks, people, categories, onAddTas
     setAssignedProcesses(0);
     setProcessQuantity(1);
     setInvoiceQuantity(0);
+    setWasNotRealized(false);
     setSelectedPerson('');
     setSelectedCategoryId('');
   };
@@ -107,7 +112,7 @@ const DailyLog: React.FC<DailyLogProps> = ({ tasks, people, categories, onAddTas
           {editingTaskId ? <Icons.Edit /> : <Icons.Plus />}
           {editingTaskId ? 'Editar Lançamento' : 'Novo Registro de Produção'}
         </h3>
-        <form onSubmit={handleSaveTask} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-4 items-end">
+        <form onSubmit={handleSaveTask} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-8 gap-3 items-end">
           <div className="lg:col-span-1">
             <label className="block text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 mb-1.5 tracking-wider">Data</label>
             <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full px-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-blue-500 transition-all text-xs font-medium" />
@@ -132,11 +137,44 @@ const DailyLog: React.FC<DailyLogProps> = ({ tasks, people, categories, onAddTas
           </div>
           <div className="lg:col-span-1">
             <label className="block text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 mb-1.5 tracking-wider">Qtd. Realizada</label>
-            <input type="number" min="0" value={processQuantity} onChange={(e) => setProcessQuantity(parseInt(e.target.value) || 0)} className="w-full px-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-blue-500 transition-all font-bold text-sm" />
+            <input 
+              type="number" 
+              min="0" 
+              value={wasNotRealized ? 0 : processQuantity} 
+              disabled={wasNotRealized} 
+              onChange={(e) => setProcessQuantity(parseInt(e.target.value) || 0)} 
+              className={`w-full px-4 py-3 rounded-2xl border bg-white dark:bg-slate-800 outline-none focus:ring-2 focus:ring-blue-500 transition-all font-bold text-sm ${wasNotRealized ? 'border-slate-100 dark:border-slate-800 text-slate-300 dark:text-slate-600 cursor-not-allowed' : 'border-slate-200 dark:border-slate-800 dark:text-white'}`} 
+            />
           </div>
           <div className="lg:col-span-1">
             <label className="block text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 mb-1.5 tracking-wider">Notas Fiscais</label>
-            <input type="number" min="0" value={invoiceQuantity} onChange={(e) => setInvoiceQuantity(parseInt(e.target.value) || 0)} className="w-full px-4 py-3 rounded-2xl border border-emerald-200 dark:border-emerald-800 bg-white dark:bg-slate-800 outline-none focus:ring-2 focus:ring-emerald-500 transition-all font-bold text-emerald-600 dark:text-emerald-400 text-sm" />
+            <input 
+              type="number" 
+              min="0" 
+              value={wasNotRealized ? 0 : invoiceQuantity} 
+              disabled={wasNotRealized} 
+              onChange={(e) => setInvoiceQuantity(parseInt(e.target.value) || 0)} 
+              className={`w-full px-4 py-3 rounded-2xl border bg-white dark:bg-slate-800 outline-none focus:ring-2 focus:ring-emerald-500 transition-all font-bold text-sm ${wasNotRealized ? 'border-slate-100 dark:border-slate-800 text-slate-300 dark:text-slate-600 cursor-not-allowed' : 'border-emerald-200 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400'}`} 
+            />
+          </div>
+          <div className="lg:col-span-1 flex items-center h-full pb-3.5">
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input 
+                type="checkbox" 
+                checked={wasNotRealized} 
+                onChange={(e) => {
+                  setWasNotRealized(e.target.checked);
+                  if (e.target.checked) {
+                    setProcessQuantity(0);
+                    setInvoiceQuantity(0);
+                  } else {
+                    setProcessQuantity(1);
+                  }
+                }} 
+                className="w-4 h-4 text-rose-600 border-slate-300 rounded focus:ring-rose-500 cursor-pointer"
+              />
+              <span className="text-[10px] font-black uppercase text-rose-600 dark:text-rose-400 tracking-wider">Não Realizado</span>
+            </label>
           </div>
           <div className="flex gap-2">
             <button type="submit" className={`flex-1 ${editingTaskId ? 'bg-amber-500' : 'bg-blue-600'} text-white py-3.5 rounded-2xl font-bold shadow-lg transition-all active:scale-95 text-xs uppercase tracking-widest`}>
@@ -236,10 +274,18 @@ const DailyLog: React.FC<DailyLogProps> = ({ tasks, people, categories, onAddTas
                         <span className="text-sm font-black text-indigo-600 dark:text-indigo-400">{task.assignedProcesses || 0}</span>
                       </td>
                       <td className="px-8 py-6 text-center">
-                        <span className="text-sm font-black text-slate-800 dark:text-slate-200">{task.processQuantity}</span>
+                        {task.wasNotRealized ? (
+                          <span className="px-2 py-1 rounded text-[9px] font-black text-rose-500 bg-rose-50 dark:text-rose-400 dark:bg-rose-950/20 border border-rose-200/50 uppercase tracking-widest">Não Realizado</span>
+                        ) : (
+                          <span className="text-sm font-black text-slate-800 dark:text-slate-200">{task.processQuantity}</span>
+                        )}
                       </td>
                       <td className="px-8 py-6 text-center">
-                        <span className="text-sm font-black text-emerald-600 dark:text-emerald-400">{task.invoiceQuantity}</span>
+                        {task.wasNotRealized ? (
+                          <span className="text-slate-400 dark:text-slate-600">-</span>
+                        ) : (
+                          <span className="text-sm font-black text-emerald-600 dark:text-emerald-400">{task.invoiceQuantity}</span>
+                        )}
                       </td>
                       <td className="px-8 py-6 text-right">
                         <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">

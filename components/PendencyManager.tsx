@@ -7,9 +7,22 @@ interface PendencyManagerProps {
   people: Person[];
   onAdd: (p: Pendency) => void;
   onRemove: (id: string) => void;
+  documentTypes: string[];
+  pendingTypes: string[];
+  onUpdateDocumentTypes: (types: string[]) => void;
+  onUpdatePendingTypes: (types: string[]) => void;
 }
 
-const PendencyManager: React.FC<PendencyManagerProps> = ({ pendencies, people, onAdd, onRemove }) => {
+const PendencyManager: React.FC<PendencyManagerProps> = ({ 
+  pendencies, 
+  people, 
+  onAdd, 
+  onRemove,
+  documentTypes,
+  pendingTypes,
+  onUpdateDocumentTypes,
+  onUpdatePendingTypes
+}) => {
   const getLocalDateStr = (d: Date = new Date()) => {
     const offset = d.getTimezoneOffset();
     const localDate = new Date(d.getTime() - (offset * 60 * 1000));
@@ -19,9 +32,18 @@ const PendencyManager: React.FC<PendencyManagerProps> = ({ pendencies, people, o
   // State para o formulário
   const [selectedPerson, setSelectedPerson] = useState('');
   const [date, setDate] = useState(getLocalDateStr());
-  const [documentType, setDocumentType] = useState<Pendency['documentType']>('Relatório');
+  const [documentType, setDocumentType] = useState('');
   const [sector, setSector] = useState<Pendency['sector']>('GCIF');
-  const [pendingType, setPendingType] = useState<Pendency['pendingType']>('Contrato de gestão incorreto/ausente');
+  const [pendingType, setPendingType] = useState('');
+
+  // Sane defaults or selected ones
+  const activeDocType = documentTypes.includes(documentType) ? documentType : (documentTypes[0] || '');
+  const activePendingType = pendingTypes.includes(pendingType) ? pendingType : (pendingTypes[0] || '');
+
+  // Add state for editing options
+  const [newDocType, setNewDocType] = useState('');
+  const [newPendingType, setNewPendingType] = useState('');
+  const [isConfigExpanded, setIsConfigExpanded] = useState(false);
 
   // State para os filtros de listagem
   const [filterPerson, setFilterPerson] = useState('');
@@ -36,9 +58,9 @@ const PendencyManager: React.FC<PendencyManagerProps> = ({ pendencies, people, o
       id: Math.random().toString(36).substr(2, 9),
       personId: selectedPerson,
       date,
-      documentType,
+      documentType: activeDocType,
       sector,
-      pendingType
+      pendingType: activePendingType
     });
 
     // Reset some form options
@@ -67,29 +89,15 @@ const PendencyManager: React.FC<PendencyManagerProps> = ({ pendencies, people, o
     setFilterEndDate('');
   };
 
-  const documentTypes: Pendency['documentType'][] = [
-    'Relatório', 'Memorando', 'Despacho', 'Disponibilidade'
-  ];
-
   const sectors: Pendency['sector'][] = [
     'GCIF', 'JURÍDICO'
-  ];
-
-  const pendingTypes: Pendency['pendingType'][] = [
-    'Contrato de gestão incorreto/ausente',
-    'Centro de custo incorreto',
-    'Valor da NF incorreto',
-    'Anexado incorretamente',
-    'Natureza incorreta',
-    'Nº da nota incorreto',
-    'Nº do memorando incorreto'
   ];
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pb-10">
       {/* Formulário de Cadastro */}
-      <div className="lg:col-span-1">
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 sticky top-6">
+      <div className="lg:col-span-1 space-y-6">
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800">
           <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-6 flex items-center gap-2">
             <span className="text-amber-500"><Icons.AlertCircle /></span> Preencher Pendência
           </h3>
@@ -123,8 +131,8 @@ const PendencyManager: React.FC<PendencyManagerProps> = ({ pendencies, people, o
             <div>
               <label className="block text-[10px] font-black uppercase text-slate-400 mb-1.5 tracking-wider">Documento de Pendência</label>
               <select 
-                value={documentType} 
-                onChange={(e) => setDocumentType(e.target.value as any)}
+                value={activeDocType} 
+                onChange={(e) => setDocumentType(e.target.value)}
                 className="w-full px-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 dark:text-white text-sm outline-none focus:ring-2 focus:ring-blue-500"
                 required
               >
@@ -153,8 +161,8 @@ const PendencyManager: React.FC<PendencyManagerProps> = ({ pendencies, people, o
             <div>
               <label className="block text-[10px] font-black uppercase text-slate-400 mb-1.5 tracking-wider">Tipo de Pendência</label>
               <select 
-                value={pendingType} 
-                onChange={(e) => setPendingType(e.target.value as any)}
+                value={activePendingType} 
+                onChange={(e) => setPendingType(e.target.value)}
                 className="w-full px-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 dark:text-white text-sm outline-none focus:ring-2 focus:ring-blue-500"
                 required
               >
@@ -172,6 +180,116 @@ const PendencyManager: React.FC<PendencyManagerProps> = ({ pendencies, people, o
             </button>
           </form>
         </div>
+
+        {/* Card de Configurações das Opções */}
+        <button
+          type="button"
+          onClick={() => setIsConfigExpanded(!isConfigExpanded)}
+          className="w-full flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/40 hover:bg-slate-100 dark:hover:bg-slate-800/60 rounded-2xl border border-slate-200/50 dark:border-slate-850 text-xs font-bold text-slate-700 dark:text-slate-300 transition-all shadow-sm"
+        >
+          <span className="flex items-center gap-2">
+            <span className="text-violet-500"><Icons.Settings /></span> Configurar Opções
+          </span>
+          <span className="text-[10px] font-extrabold uppercase text-violet-600 dark:text-violet-400 tracking-wider flex items-center gap-1">
+            {isConfigExpanded ? 'Ocultar ×' : 'Expandir +'}
+          </span>
+        </button>
+
+        {isConfigExpanded && (
+          <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 transition-all">
+            <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 mb-4 flex items-center gap-2">
+              <span className="text-violet-500"><Icons.Settings /></span> Configurar Opções da Pendência
+            </h3>
+            
+            {/* Gerenciar Documentos */}
+            <div className="space-y-3 mb-6">
+              <label className="block text-[10px] font-black uppercase text-slate-400 tracking-wider">Documentos de Pendência</label>
+              <div className="flex flex-wrap gap-1.5 p-2 bg-slate-50 dark:bg-slate-800/50 rounded-xl min-h-[40px] border border-slate-100 dark:border-slate-850">
+                {documentTypes.length === 0 ? (
+                  <span className="text-[10px] font-medium text-slate-400 pl-1 p-0.5">Nenhum cadastrado</span>
+                ) : (
+                  documentTypes.map((t) => (
+                    <span key={t} className="inline-flex items-center gap-1 bg-white dark:bg-slate-800 text-[10px] font-bold text-slate-700 dark:text-slate-300 px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm shadow-slate-100 dark:shadow-none">
+                      {t}
+                      <button
+                        type="button"
+                        onClick={() => onUpdateDocumentTypes(documentTypes.filter(x => x !== t))}
+                        className="text-slate-400 hover:text-red-500 font-black text-xs pl-0.5"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))
+                )}
+              </div>
+              <div className="flex gap-2">
+                <input 
+                  type="text" 
+                  placeholder="Novo documento..." 
+                  value={newDocType}
+                  onChange={(e) => setNewDocType(e.target.value)}
+                  className="flex-1 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 dark:text-white text-xs outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (newDocType.trim() && !documentTypes.includes(newDocType.trim())) {
+                      onUpdateDocumentTypes([...documentTypes, newDocType.trim()]);
+                      setNewDocType('');
+                    }
+                  }}
+                  className="bg-slate-800 dark:bg-slate-700 hover:bg-slate-700 text-white px-3.5 py-2 rounded-xl text-xs font-bold"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+
+            {/* Gerenciar Tipos de Pendência */}
+            <div className="space-y-3">
+              <label className="block text-[10px] font-black uppercase text-slate-400 tracking-wider">Tipos de Pendência</label>
+              <div className="max-h-[160px] overflow-y-auto space-y-1.5 p-2 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-850">
+                {pendingTypes.length === 0 ? (
+                  <span className="text-[10px] font-medium text-slate-400 pl-1 p-0.5">Nenhum cadastrado</span>
+                ) : (
+                  pendingTypes.map((t) => (
+                    <div key={t} className="flex items-center justify-between bg-white dark:bg-slate-800 text-[10px] font-medium text-slate-700 dark:text-slate-300 p-2 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm gap-2">
+                      <span className="truncate">{t}</span>
+                      <button
+                        type="button"
+                        onClick={() => onUpdatePendingTypes(pendingTypes.filter(x => x !== t))}
+                        className="text-red-500 hover:text-red-700 font-bold px-1.5 hover:bg-red-50 dark:hover:bg-red-950/20 rounded"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+              <div className="flex gap-2">
+                <input 
+                  type="text" 
+                  placeholder="Novo tipo..." 
+                  value={newPendingType}
+                  onChange={(e) => setNewPendingType(e.target.value)}
+                  className="flex-1 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 dark:text-white text-xs outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (newPendingType.trim() && !pendingTypes.includes(newPendingType.trim())) {
+                      onUpdatePendingTypes([...pendingTypes, newPendingType.trim()]);
+                      setNewPendingType('');
+                    }
+                  }}
+                  className="bg-slate-800 dark:bg-slate-700 hover:bg-slate-700 text-white px-3.5 py-2 rounded-xl text-xs font-bold"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Listagem de Pendências */}

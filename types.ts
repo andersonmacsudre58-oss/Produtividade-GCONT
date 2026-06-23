@@ -22,6 +22,7 @@ export interface Task {
   date: string; // ISO date string YYYY-MM-DD
   processQuantity: number; // Qtd de Processos (antigo quantity)
   assignedProcesses: number; // Qtd de Processos Atribuídos
+  wasNotRealized?: boolean; // Toggled to declare that this task was intentionally not completed
 }
 
 export interface Particularity {
@@ -43,9 +44,9 @@ export interface ProcessFlow {
 export interface Pendency {
   id: string;
   personId: string;
-  documentType: 'Relatório' | 'Memorando' | 'Despacho' | 'Disponibilidade';
+  documentType: string;
   sector: 'GCIF' | 'JURÍDICO';
-  pendingType: 'Contrato de gestão incorreto/ausente' | 'Centro de custo incorreto' | 'Valor da NF incorreto' | 'Anexado incorretamente' | 'Nº da nota incorreto' | 'Nº do memorando incorreto' | 'Natureza incorreta';
+  pendingType: string;
   date: string; // ISO date string YYYY-MM-DD
 }
 
@@ -57,4 +58,6 @@ export interface AppState {
   serviceCategories: ServiceCategory[];
   userRole: UserRole;
   pendencies?: Pendency[]; // Optional to avoid breaking old stored state
+  pendencyDocumentTypes?: string[];
+  pendencyTypes?: string[];
 }
