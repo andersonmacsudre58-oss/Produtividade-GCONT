@@ -384,7 +384,7 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onRefresh }) => {
       // Calculate % of impact:
       let impactPercent = 0;
       if (totalRealizados > 0) {
-        impactPercent = Math.round((totalPendecias / totalRealizados) * 100);
+        impactPercent = (totalPendecias / totalRealizados) * 100;
       } else if (totalPendecias > 0) {
         impactPercent = 100;
       }
@@ -414,7 +414,7 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onRefresh }) => {
     const totalPendeciasAll = filteredList.reduce((acc, item) => acc + item.totalPendecias, 0);
     let totalImpactPercent = 0;
     if (totalRealizadosAll > 0) {
-      totalImpactPercent = Math.round((totalPendeciasAll / totalRealizadosAll) * 100);
+      totalImpactPercent = (totalPendeciasAll / totalRealizadosAll) * 100;
     }
 
     return { list: filteredList, totalRealizadosAll, totalPendeciasAll, totalImpactPercent };
@@ -1075,7 +1075,7 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onRefresh }) => {
                           <span className="text-slate-500 dark:text-slate-400 min-w-[15px]">{row.totalRealizados}</span>
                           <span className="text-amber-600 dark:text-amber-400 font-extrabold min-w-[15px]">{row.totalPendecias}</span>
                           <span className="text-rose-600 dark:text-rose-450 font-black min-w-[32px] bg-rose-50 dark:bg-rose-950/30 px-1 py-0.5 rounded text-[10px] text-center">
-                            {row.impactPercent}%
+                            {row.impactPercent.toFixed(2).replace('.', ',')}%
                           </span>
                         </div>
                       </div>
@@ -1091,7 +1091,7 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onRefresh }) => {
                     <span className="text-slate-500 dark:text-slate-450 min-w-[15px]">{collaboratorPendencySummary.totalRealizadosAll}</span>
                     <span className="text-amber-600 dark:text-amber-400 min-w-[15px]">{collaboratorPendencySummary.totalPendeciasAll}</span>
                     <span className="text-rose-600 dark:text-rose-400 min-w-[32px] bg-rose-100 dark:bg-rose-950/60 px-1 py-0.5 rounded text-[10px] text-center">
-                      {collaboratorPendencySummary.totalImpactPercent}%
+                      {collaboratorPendencySummary.totalImpactPercent.toFixed(2).replace('.', ',')}%
                     </span>
                   </div>
                 </div>
