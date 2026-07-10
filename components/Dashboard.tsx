@@ -76,7 +76,7 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onRefresh }) => {
 
   const currentParticularities = useMemo(() => {
     return (state.particularities || []).filter(p => 
-      (!startDate || p.date >= startDate) && (!endDate || p.date <= endDate)
+      (!startDate || (p.endDate || p.date) >= startDate) && (!endDate || p.date <= endDate)
     ).sort((a, b) => b.date.localeCompare(a.date));
   }, [state.particularities, startDate, endDate]);
 
@@ -617,6 +617,11 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onRefresh }) => {
               ) : (
                 currentParticularities.map((p) => {
                   const person = state.people.find(per => per.id === p.personId);
+                  const isRange = p.endDate && p.endDate !== p.date;
+                  const start = new Date(p.date + 'T00:00:00');
+                  const end = new Date((p.endDate || p.date) + 'T00:00:00');
+                  const diffDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+
                   const colors = p.type === 'Saúde' ? 'border-rose-400 bg-rose-50 text-rose-900 dark:bg-rose-950 dark:border-rose-800 dark:text-rose-200' : 
                                 p.type === 'Treinamento' ? 'border-blue-400 bg-blue-50 text-blue-900 dark:bg-blue-950 dark:border-blue-800 dark:text-blue-200' : 
                                 p.type === 'Administrativo' ? 'border-amber-400 bg-amber-50 text-amber-900 dark:bg-amber-950 dark:border-amber-800 dark:text-amber-200' :
@@ -625,7 +630,12 @@ const Dashboard: React.FC<DashboardProps> = ({ state, onRefresh }) => {
                     <div key={p.id} className={`flex-shrink-0 min-w-[280px] p-4 rounded-2xl border ${colors} shadow-sm transition-all`}>
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-[10px] font-black uppercase truncate max-w-[150px] tracking-tight">{person?.name}</span>
-                        <span className="text-[9px] font-bold opacity-80">{p.date.split('-').reverse().slice(0,2).join('/')}</span>
+                        <span className="text-[9px] font-bold opacity-80">
+                          {isRange 
+                            ? `${diffDays} dias (${p.date.split('-').reverse().slice(0,2).join('/')} a ${p.endDate!.split('-').reverse().slice(0,2).join('/')})` 
+                            : p.date.split('-').reverse().slice(0,2).join('/')
+                          }
+                        </span>
                       </div>
                       <p className="text-[11px] font-semibold leading-tight line-clamp-2">"{p.description}"</p>
                     </div>

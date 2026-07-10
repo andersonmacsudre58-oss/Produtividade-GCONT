@@ -1,12 +1,13 @@
 
 import React, { useState, useMemo } from 'react';
-import { Person, Task, ServiceCategory, UserRole } from '../types';
+import { Person, Task, ServiceCategory, UserRole, Particularity } from '../types';
 import { Icons } from '../constants';
 
 interface DailyLogProps {
   tasks: Task[];
   people: Person[];
   categories: ServiceCategory[];
+  particularities?: Particularity[];
   onAddTask: (task: Task) => void;
   onEditTask: (task: Task) => void;
   onRemoveTask: (id: string) => void;
@@ -14,7 +15,7 @@ interface DailyLogProps {
   onRefresh?: () => Promise<void>;
 }
 
-const DailyLog: React.FC<DailyLogProps> = ({ tasks, people, categories, onAddTask, onEditTask, onRemoveTask, userRole, onRefresh }) => {
+const DailyLog: React.FC<DailyLogProps> = ({ tasks, people, categories, particularities = [], onAddTask, onEditTask, onRemoveTask, userRole, onRefresh }) => {
   const getLocalDateStr = () => {
     const d = new Date();
     const offset = d.getTimezoneOffset();
@@ -44,6 +45,16 @@ const DailyLog: React.FC<DailyLogProps> = ({ tasks, people, categories, onAddTas
       })
       .sort((a, b) => b.id.localeCompare(a.id));
   }, [tasks, filterDate, filterPersonId]);
+
+  const activeParticularity = useMemo(() => {
+    if (!selectedPerson || !date || !particularities) return null;
+    return particularities.find(p => {
+      if (p.personId !== selectedPerson) return false;
+      const start = p.date;
+      const end = p.endDate || p.date;
+      return date >= start && date <= end;
+    });
+  }, [selectedPerson, date, particularities]);
 
   const handleRefresh = async () => {
     if (onRefresh) {
@@ -121,7 +132,17 @@ const DailyLog: React.FC<DailyLogProps> = ({ tasks, people, categories, onAddTas
             <label className="block text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 mb-1.5 tracking-wider">Colaborador</label>
             <select value={selectedPerson} onChange={(e) => setSelectedPerson(e.target.value)} className="w-full px-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-blue-500 transition-all text-xs font-medium" required>
               <option value="">Selecione...</option>
-              {people.filter(p => !p.isHidden || p.id === selectedPerson).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+              {people.filter(p => !p.isHidden || p.id === selectedPerson).map(p => {
+                const hasLeave = particularities && particularities.some(part => {
+                  if (part.personId !== p.id) return false;
+                  return date >= part.date && date <= (part.endDate || part.date);
+                });
+                return (
+                  <option key={p.id} value={p.id}>
+                    {p.name} {hasLeave ? '⚠️ (AFASTADO)' : ''}
+                  </option>
+                );
+              })}
             </select>
           </div>
           <div className="lg:col-span-1">
@@ -176,6 +197,21 @@ const DailyLog: React.FC<DailyLogProps> = ({ tasks, people, categories, onAddTas
               <span className="text-[10px] font-black uppercase text-rose-600 dark:text-rose-400 tracking-wider">Não Realizado</span>
             </label>
           </div>
+          {activeParticularity && (
+            <div className="lg:col-span-8 p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 rounded-2xl flex items-start gap-3 animate-in slide-in-from-top-2 duration-300">
+              <span className="text-amber-500 dark:text-amber-400 mt-0.5 text-base">⚠️</span>
+              <div>
+                <p className="text-xs font-black uppercase tracking-wider text-amber-800 dark:text-amber-300">
+                  Aviso: Colaborador(a) com afastamento/particularidade registrada nesta data!
+                </p>
+                <p className="text-[11px] text-amber-700 dark:text-amber-400 leading-relaxed mt-1">
+                  Este colaborador possui o registro de <strong>{activeParticularity.type}</strong> cadastrado para o período selecionado (<strong>{activeParticularity.date.split('-').reverse().join('/')}</strong>
+                  {activeParticularity.endDate && activeParticularity.endDate !== activeParticularity.date ? ` até ${activeParticularity.endDate.split('-').reverse().join('/')}` : ''}).
+                  {activeParticularity.description && ` Observação: "${activeParticularity.description}"`}
+                </p>
+              </div>
+            </div>
+          )}
           <div className="flex gap-2">
             <button type="submit" className={`flex-1 ${editingTaskId ? 'bg-amber-500' : 'bg-blue-600'} text-white py-3.5 rounded-2xl font-bold shadow-lg transition-all active:scale-95 text-xs uppercase tracking-widest`}>
               {editingTaskId ? 'SALVAR' : 'LANÇAR'}

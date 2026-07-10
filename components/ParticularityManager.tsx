@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { Person, Particularity } from '../types';
 import { Icons } from '../constants';
@@ -17,15 +16,33 @@ const ParticularityManager: React.FC<ParticularityManagerProps> = ({ particulari
     return localDate.toISOString().split('T')[0];
   };
 
+  const formatDateBR = (dateStr: string) => {
+    if (!dateStr) return '';
+    const [year, month, day] = dateStr.split('-');
+    return `${day}/${month}/${year}`;
+  };
+
   // State para o formulário
   const [selectedPerson, setSelectedPerson] = useState('');
   const [date, setDate] = useState(getLocalDateStr());
+  const [isPeriod, setIsPeriod] = useState(false);
+  const [endDate, setEndDate] = useState(getLocalDateStr());
   const [type, setType] = useState<Particularity['type']>('Saúde');
   const [description, setDescription] = useState('');
 
-  // State para os filtros
+  // State para os filtros de listagem
   const [filterStartDate, setFilterStartDate] = useState('');
   const [filterEndDate, setFilterEndDate] = useState('');
+
+  const calculatedDays = useMemo(() => {
+    if (!isPeriod || !date || !endDate) return 1;
+    const start = new Date(date + 'T00:00:00');
+    const end = new Date(endDate + 'T00:00:00');
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) return 1;
+    const diffTime = end.getTime() - start.getTime();
+    if (diffTime < 0) return 0;
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+  }, [isPeriod, date, endDate]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,18 +52,22 @@ const ParticularityManager: React.FC<ParticularityManagerProps> = ({ particulari
       id: Math.random().toString(36).substr(2, 9),
       personId: selectedPerson,
       date,
+      endDate: isPeriod ? endDate : date,
       type,
       description: description.trim()
     });
 
     setDescription('');
+    setIsPeriod(false);
+    setDate(getLocalDateStr());
+    setEndDate(getLocalDateStr());
   };
 
   const filteredParticularities = useMemo(() => {
     let result = [...particularities];
     
     if (filterStartDate) {
-      result = result.filter(p => p.date >= filterStartDate);
+      result = result.filter(p => (p.endDate || p.date) >= filterStartDate);
     }
     
     if (filterEndDate) {
@@ -90,15 +111,64 @@ const ParticularityManager: React.FC<ParticularityManagerProps> = ({ particulari
                 {people.filter(p => !p.isHidden || p.id === selectedPerson).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
             </div>
-            <div>
-              <label className="block text-[10px] font-black uppercase text-slate-400 mb-1.5 tracking-wider">Data</label>
-              <input 
-                type="date" 
-                value={date} 
-                onChange={(e) => setDate(e.target.value)}
-                className="w-full px-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 dark:text-white text-sm outline-none focus:ring-2 focus:ring-blue-500"
-              />
+
+            {/* Checkbox para Definir Período de Afastamento */}
+            <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-850 flex items-center justify-between">
+              <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                <input 
+                  type="checkbox" 
+                  checked={isPeriod}
+                  onChange={(e) => {
+                    setIsPeriod(e.target.checked);
+                    if (e.target.checked) {
+                      setEndDate(date);
+                    }
+                  }}
+                  className="w-4 h-4 text-blue-600 border-slate-300 dark:border-slate-700 rounded focus:ring-blue-500 cursor-pointer"
+                />
+                <div>
+                  <span className="block text-xs font-bold text-slate-700 dark:text-slate-300">Registrar Período (Afastamento)</span>
+                  <span className="block text-[9px] text-slate-400 font-medium">Atestado, férias ou licença estendida</span>
+                </div>
+              </label>
             </div>
+
+            {/* Campos de Data */}
+            <div className="grid grid-cols-1 gap-4">
+              <div>
+                <label className="block text-[10px] font-black uppercase text-slate-400 mb-1.5 tracking-wider">
+                  {isPeriod ? 'Data de Início' : 'Data'}
+                </label>
+                <input 
+                  type="date" 
+                  value={date} 
+                  onChange={(e) => {
+                    setDate(e.target.value);
+                    if (!isPeriod || endDate < e.target.value) {
+                      setEndDate(e.target.value);
+                    }
+                  }}
+                  className="w-full px-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 dark:text-white text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              {isPeriod && (
+                <div className="animate-in slide-in-from-top-2 duration-200">
+                  <label className="block text-[10px] font-black uppercase text-slate-400 mb-1.5 tracking-wider">Data de Término</label>
+                  <input 
+                    type="date" 
+                    value={endDate} 
+                    min={date}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    className="w-full px-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 dark:text-white text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <div className="mt-2 text-[10px] text-blue-600 dark:text-blue-400 font-black uppercase tracking-wider flex items-center gap-1">
+                    ⏱️ Total: {calculatedDays} {calculatedDays === 1 ? 'dia' : 'dias'} de afastamento
+                  </div>
+                </div>
+              )}
+            </div>
+
             <div>
               <label className="block text-[10px] font-black uppercase text-slate-400 mb-1.5 tracking-wider">Tipo</label>
               <div className="grid grid-cols-2 gap-2">
@@ -120,7 +190,7 @@ const ParticularityManager: React.FC<ParticularityManagerProps> = ({ particulari
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 rows={3}
-                placeholder="Ex: Consulta médica agendada para o período da manhã."
+                placeholder={isPeriod ? "Ex: Licença médica de atestado ou período completo de férias." : "Ex: Consulta médica agendada para o período da manhã."}
                 className="w-full px-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 dark:text-white text-sm outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                 required
               />
@@ -183,16 +253,34 @@ const ParticularityManager: React.FC<ParticularityManagerProps> = ({ particulari
             ) : (
               filteredParticularities.map((p) => {
                 const person = people.find(per => per.id === p.personId);
+                const isRange = p.endDate && p.endDate !== p.date;
+                const start = new Date(p.date + 'T00:00:00');
+                const end = new Date((p.endDate || p.date) + 'T00:00:00');
+                const diffDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+
                 return (
                   <div key={p.id} className="p-6 flex items-start justify-between hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
                     <div className="flex gap-4">
-                      <div className={`mt-1 w-10 h-10 rounded-xl flex items-center justify-center font-bold text-xs ${getTypeStyle(p.type)}`}>
-                        {p.date.split('-').reverse().slice(0, 2).join('/')}
-                      </div>
+                      {isRange ? (
+                        <div className={`mt-1 w-12 h-12 rounded-xl flex flex-col items-center justify-center font-black ${getTypeStyle(p.type)}`}>
+                          <span className="text-sm leading-none">{diffDays}d</span>
+                          <span className="text-[7px] opacity-75 uppercase tracking-tighter mt-0.5">Afastado</span>
+                        </div>
+                      ) : (
+                        <div className={`mt-1 w-12 h-12 rounded-xl flex flex-col items-center justify-center font-bold ${getTypeStyle(p.type)}`}>
+                          <span className="font-black text-sm leading-none">{p.date.split('-').reverse()[0]}</span>
+                          <span className="text-[9px] opacity-75 uppercase mt-0.5">{p.date.split('-').reverse()[1]}/{p.date.split('-').reverse()[2]?.slice(2)}</span>
+                        </div>
+                      )}
                       <div>
-                        <div className="flex items-center gap-2 mb-1">
+                        <div className="flex flex-wrap items-center gap-2 mb-1">
                           <p className="font-bold text-slate-800 dark:text-slate-100">{person?.name || '??'}</p>
                           <span className={`text-[9px] font-black px-2 py-0.5 rounded uppercase ${getTypeStyle(p.type)}`}>{p.type}</span>
+                          {isRange && (
+                            <span className="bg-rose-50 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300 text-[9px] font-black px-2 py-0.5 rounded uppercase flex items-center gap-1 border border-rose-100 dark:border-rose-900/30">
+                              ⏱️ {formatDateBR(p.date)} até {formatDateBR(p.endDate!)} ({diffDays} dias)
+                            </span>
+                          )}
                         </div>
                         <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">{p.description}</p>
                       </div>

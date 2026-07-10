@@ -28,7 +28,8 @@ export interface Task {
 export interface Particularity {
   id: string;
   personId: string;
-  date: string;
+  date: string; // Start date of range (YYYY-MM-DD)
+  endDate?: string; // Optional end date of range (YYYY-MM-DD)
   type: 'Saúde' | 'Treinamento' | 'Administrativo' | 'Outros';
   description: string;
 }

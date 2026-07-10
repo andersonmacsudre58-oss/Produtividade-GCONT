@@ -428,6 +428,7 @@ const App: React.FC = () => {
           {activeTab === 'logs' && (
             <DailyLog 
               tasks={state.tasks} people={state.people} categories={state.serviceCategories}
+              particularities={state.particularities || []}
               onAddTask={(t) => persist({...state, tasks: [...state.tasks, t]})} 
               onEditTask={(t) => persist({...state, tasks: state.tasks.map(x => x.id === t.id ? t : x)})}
               onRemoveTask={(id) => persist({...state, tasks: state.tasks.filter(x => x.id !== id)})}
