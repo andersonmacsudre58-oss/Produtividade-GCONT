@@ -1,6 +1,7 @@
 
 import React, { useState, useRef } from 'react';
-import { ServiceCategory, AppState, Task } from '../types';
+import * as XLSX from 'xlsx';
+import { ServiceCategory, AppState } from '../types';
 import { Icons, PRESET_COLORS } from '../constants';
 
 interface ServiceManagerProps {
@@ -14,6 +15,7 @@ interface ServiceManagerProps {
 const ServiceManager: React.FC<ServiceManagerProps> = ({ categories, onAdd, onRemove, state, onImport }) => {
   const [name, setName] = useState('');
   const [selectedColor, setSelectedColor] = useState(PRESET_COLORS[0]);
+  const [exportFeedback, setExportFeedback] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -41,40 +43,92 @@ const ServiceManager: React.FC<ServiceManagerProps> = ({ categories, onAdd, onRe
   };
 
   const exportToExcel = () => {
-    if (!state.tasks || state.tasks.length === 0) {
-      alert("Não há lançamentos para exportar.");
+    const tasks = state.tasks || [];
+    const particularities = state.particularities || [];
+
+    if (tasks.length === 0 && particularities.length === 0) {
+      setExportFeedback("Não há lançamentos nem particularidades para exportar.");
+      setTimeout(() => setExportFeedback(null), 4000);
       return;
     }
 
-    // Cabeçalhos para o Excel
-    const headers = ["Data", "Colaborador", "Servico", "Processos Atribuidos", "Qtd Realizada", "Notas Fiscais"];
-    
-    // Mapear os dados cruzando IDs com nomes reais
-    const rows = state.tasks.map(task => {
+    setExportFeedback(null);
+
+    // Aba 1: Registros
+    const taskHeaders = ["Data", "Colaborador", "Servico", "Processos Atribuidos", "Qtd Realizada", "Notas Fiscais"];
+    const taskRows = tasks.map(task => {
       const person = state.people.find(p => p.id === task.personId)?.name || "Desconhecido";
       const category = state.serviceCategories.find(c => c.id === task.serviceCategoryId)?.name || "N/A";
-      
-      // Sanitizar campos para CSV (evitar quebra de linha ou aspas problemáticas)
+
       return [
         task.date,
-        `"${person.replace(/"/g, '""')}"`,
-        `"${category.replace(/"/g, '""')}"`,
-        task.assignedProcesses || 0,
-        task.processQuantity || 0,
-        task.invoiceQuantity || 0
-      ].join(";"); // Usar ponto e vírgula para compatibilidade com Excel PT-BR
+        person,
+        category,
+        Number(task.assignedProcesses) || 0,
+        Number(task.processQuantity) || 0,
+        Number(task.invoiceQuantity) || 0
+      ];
     });
 
-    // BOM (Byte Order Mark) para garantir que o Excel entenda como UTF-8
-    const csvContent = "\uFEFF" + [headers.join(";"), ...rows].join("\n");
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const registrosSheet = XLSX.utils.aoa_to_sheet([taskHeaders, ...taskRows]);
+    registrosSheet['!cols'] = [
+      { wch: 14 },
+      { wch: 28 },
+      { wch: 24 },
+      { wch: 22 },
+      { wch: 16 },
+      { wch: 16 }
+    ];
+
+    // Aba 2: Particularidades
+    const particularityHeaders = ["Data Início", "Data Término", "Qtd Dias", "Colaborador", "Tipo", "Descrição"];
+    const particularityRows = particularities.map(p => {
+      const person = state.people.find(per => per.id === p.personId)?.name || "Desconhecido";
+      const endDate = p.endDate || p.date;
+      const start = new Date(p.date + 'T00:00:00');
+      const end = new Date(endDate + 'T00:00:00');
+      const diffDays = (!isNaN(start.getTime()) && !isNaN(end.getTime()) && end >= start)
+        ? Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1
+        : 1;
+
+      return [
+        p.date,
+        endDate,
+        diffDays,
+        person,
+        p.type,
+        p.description || ""
+      ];
+    });
+
+    const particularidadesSheet = XLSX.utils.aoa_to_sheet([particularityHeaders, ...particularityRows]);
+    particularidadesSheet['!cols'] = [
+      { wch: 14 },
+      { wch: 14 },
+      { wch: 12 },
+      { wch: 28 },
+      { wch: 18 },
+      { wch: 50 }
+    ];
+
+    // Montar Workbook com 2 abas
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, registrosSheet, "Registros");
+    XLSX.utils.book_append_sheet(workbook, particularidadesSheet, "Particularidades");
+
+    const wbout = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+    const blob = new Blob([wbout], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    });
     const url = URL.createObjectURL(blob);
-    
+
     const link = document.createElement("a");
     link.setAttribute("href", url);
-    link.setAttribute("download", `relatorio_produtividade_total_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute("download", `relatorio_produtividade_total_${new Date().toISOString().split('T')[0]}.xlsx`);
+    document.body.appendChild(link);
     link.click();
-    
+    document.body.removeChild(link);
+
     URL.revokeObjectURL(url);
   };
 
@@ -155,7 +209,7 @@ const ServiceManager: React.FC<ServiceManagerProps> = ({ categories, onAdd, onRe
               <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">Relatórios & Backup</h3>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-500 mb-6 font-medium leading-relaxed">
-              Exportar todos os lançamentos históricos para Excel ou baixar um arquivo de backup do sistema.
+              Exportar todos os lançamentos e particularidades para Excel (2 abas) ou baixar um arquivo de backup do sistema.
             </p>
             <div className="space-y-3">
               <button
@@ -163,8 +217,13 @@ const ServiceManager: React.FC<ServiceManagerProps> = ({ categories, onAdd, onRe
                 className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-indigo-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 dark:shadow-none active:scale-95"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                Exportar Lançamentos (Excel/CSV)
+                Exportar Relatório (Excel)
               </button>
+              {exportFeedback && (
+                <p className="text-[11px] font-bold text-amber-600 dark:text-amber-400 text-center">
+                  {exportFeedback}
+                </p>
+              )}
               <div className="w-full h-px bg-slate-100 dark:bg-slate-800 my-2"></div>
               <button
                 onClick={exportBackup}

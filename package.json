@@ -1,4 +1,3 @@
-
 {
   "name": "gerencia-contabil-pro",
   "private": true,
@@ -24,7 +23,8 @@
     "react-dom": "^19.2.3",
     "recharts": "^3.6.0",
     "typescript": "^5.0.0",
-    "vite": "^5.0.0"
+    "vite": "^5.0.0",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@types/react": "^19.0.0",
